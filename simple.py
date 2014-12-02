@@ -14,7 +14,7 @@ planck13.baryon_hmf_correction=1
 #cf=ClusterFisher(params=['fnl', 'sigma8', 'Mth', 'sigma_lnM'], param_values=[1.0, 0.8, s1.Mth, s1.sigma_lnM], priors=[0, 0, 0.1, 0.1])
 #cf=ClusterFisher(params=['fnl','sigma8', 'Mth'], param_values=[20,0.8, s1.Mth], priors=[0, 0.02, 0.1]) 
 cf=ClusterFisher(s1, planck13, params=['fnl','sigma8'], param_values=[20,0.8], param_names=["$f_{\\rm NL}$", "$\\sigma_8"], priors=[0, 0.1]) 
-s1.zmax=0.2
+s1.zmax=0.1
 s1.dlogM=1.5
 cf.fisher()
 if (cf.prior_information_added):

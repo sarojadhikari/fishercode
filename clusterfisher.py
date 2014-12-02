@@ -9,6 +9,7 @@ from functions import *
 from scipy import integrate
 from scipy.special import erfc
 from fisher import Fisher
+import multiprocessing as mp
 
 class ClusterFisher(Fisher):
     """This class implements methods to compute the cluster number count, its derivatives
@@ -76,7 +77,7 @@ class ClusterFisher(Fisher):
         result = integrate.nquad(self.Nlm_integrand, [[zl, zl+self.survey.dz], [Mm/1.e3, Mmp*1.e3]], args=[Mm, Mmp, gfratio])
         return result[0]*self.survey.dOm
     
-    def Nlm_deriv(self, l, m, param, param_value):
+    def Nlm_deriv(self, l, m, param, param_value, output):
         """compute the numerical derivative of Nlm (the cluster number count) w.r.t. the parameter specified
         at the given value
         """
@@ -99,6 +100,8 @@ class ClusterFisher(Fisher):
         finite_diff=plus_value-minus_value
         delta_pv=2*self.diff_percent*pv
         setfunc(v)
+        der=(finite_diff)/delta_pv
+        output.put((self.parameters.index(param), der))
         return (finite_diff)/delta_pv
     
     def fisher(self):
@@ -121,9 +124,19 @@ class ClusterFisher(Fisher):
             print l
             for m in range(ms):
                 Nbar=self.Nlm(l, m)
-                for i in range(self.nparams):
-                    dN[i]=self.Nlm_deriv(l, m, self.parameters[i], self.parameter_values[i])
-                    print dN[i]
+                output=mp.Queue()
+                processes=[mp.Process(target=self.Nlm_deriv, args=(l, m, self.parameters[i], self.parameter_values[i], output)) for i in range(self.nparams)]
+
+                for p in processes:
+                    p.start()
+                for p in processes:
+                    p.join()
+
+                dN=[output.get() for p in processes]
+                dN.sort()
+                dN=[r[1] for r in dN]
+                #dN[i]=self.Nlm_deriv(l, m, self.parameters[i], self.parameter_values[i])
+                print dN
  
                 for i in range(self.nparams):
                     for j in range(self.nparams):
