@@ -5,6 +5,7 @@
 """
 
 from functions import degsq2rad, deg2rad
+import numpy as np
 
 class CMBExperiment(object):
     """ CMB experiment class
@@ -23,7 +24,7 @@ class CMBExperiment(object):
            
         """
         self.lmax=LMAX
-        self.sigma=deg2rad(beamsize)
+        self.theta=deg2rad(beamsize/60.)    # beamsize is specified in arcmin
         self.wT=w   # (1/(pixel size*noise per pixel^2)
         self.name=name
         self.fsky=DeltaOmega/41253
@@ -32,5 +33,15 @@ class CMBExperiment(object):
             self.name=alias
         if name==None:
             self.dOm = degsq2rad(DeltaOmega) # the survey area in degree square is converted to radians square here
-
-
+        if name=="Planck":
+            if not(alias):
+                self.name="Planck"
+            self.lmax=2000
+            self.fsky=0.7
+            self.frequency=143
+            self.theta=deg2rad(7./60.)   # in arcmin
+            self.noiseppT=6.0  # noise per pixel for temperature in microK
+            self.noiseppP=11.5    # noise per pixel for polarization in microK
+            self.wT=1.0/(self.theta*self.noiseppT)**2.0
+            self.wP=1.0/(self.theta*self.noiseppP)**2.0
+            

@@ -74,7 +74,7 @@ class ClusterFisher(Fisher):
             Mm=Mm+Mm*10**self.survey.dlogM
             
         Mmp=Mm*10**self.survey.dlogM
-        result = integrate.nquad(self.Nlm_integrand, [[zl, zl+self.survey.dz], [Mm/1.e3, Mmp*1.e3]], args=[Mm, Mmp, gfratio])
+        result = integrate.nquad(self.Nlm_integrand, [[zl, zl+self.survey.dz], [Mm/1.e2, Mmp*1.e2]], args=[Mm, Mmp, gfratio])
         return result[0]*self.survey.dOm
     
     def Nlm_deriv(self, l, m, param, param_value, output):
@@ -119,7 +119,7 @@ class ClusterFisher(Fisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         dN=np.array([0.]*self.nparams)
         ls=int((self.survey.zmax-self.survey.zmin)/self.survey.dz)
-	ms=int((15-np.log10(self.survey.Mth))/(np.log10(1+self.survey.dlogM*2.3)))
+        ms=int((15-np.log10(self.survey.Mth))/(np.log10(1+self.survey.dlogM*2.3)))
         for l in range(ls):
             print l
             for m in range(ms):

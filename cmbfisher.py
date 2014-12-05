@@ -9,6 +9,7 @@ import numpy as np
 from functions import *
 from fisher import Fisher
 from classy import Class
+import multiprocessing as mp
 
 class CMBFisher(Fisher): 
     """This class is for computing the CMB Fisher matrix given by
@@ -40,6 +41,7 @@ class CMBFisher(Fisher):
         """
         params={
             'output': 'tCl',
+            'format': 'camb',
             'l_max_scalars': LMAX,
             'modes': 'st',
             'A_s': self.cosmology.A,
@@ -57,12 +59,17 @@ class CMBFisher(Fisher):
         cosmo.set(params)
         cosmo.compute()
         
-        self.cosmology.TTCls=1.e12*cosmo.raw_cl(LMAX)['tt']
+        self.cosmology.TTCls=17.0E12*cosmo.raw_cl(LMAX)['tt']
+        # the factor 17.0 is a quick fix for now as i don't understand the units used in
+        # the class code; it is necessary to reproduce the Cls in microK^2
+        self.cosmology.ells=cosmo.raw_cl(LMAX)['ell']
         
         if (self.include_polarization):
-            self.cosmology.TECls=1.e12*cosmo.raw_cl(LMAX)['te']
-            self.cosmology.BBCls=1.e12*cosmo.raw_cl(LMAX)['bb']
-            self.cosmology.EECls=1.e12*cosmo.raw_cl(LMAX)['ee']
+            self.cosmology.TECls=17.0E12*cosmo.raw_cl(LMAX)['te']
+            self.cosmology.BBCls=17.0E12*cosmo.raw_cl(LMAX)['bb']
+            self.cosmology.EECls=17.0E12*cosmo.raw_cl(LMAX)['ee']
+
+        cosmo.struct_cleanup()        
         
         return self.cosmology.TTCls
     
@@ -99,8 +106,18 @@ class CMBFisher(Fisher):
         delta_pv=2*self.diff_percent*pv
         setfunc(v)
         return (finite_diff)/delta_pv
-        
-    def fisherXX(self, ps='tt'):
+    
+    def noise_weight(self, ps='tt'):
+        """return the noise weight for the power spectrum specified
+        """
+        if (ps=='tt'):
+            return 1./self.experiment.wT
+        elif (ps=='ee' or ps =='bb'):
+            return 1./self.experiment.wP
+        else:
+            return 0.
+    
+    def fisherXX(self, ps, output):
         """computes the fisher matrix given the parameters, experiment and cosmology definitions
         """
         # loop over multipoles to form the Fisher matrix
@@ -119,7 +136,10 @@ class CMBFisher(Fisher):
                     
         for i in range(self.nparams):
             for j in range(self.nparams):
-                fmatrix[i][j]=np.sum(np.array([(self.experiment.fsky*(2*l+1)/2)*(dCij[i]*dCij[j])/(ClXX[l]+self.experiment.wT**(-1) *np.exp((self.experiment.sigma*l)**2.0)) for l in range(2, self.experiment.lmax-1)]))
+                fijl=np.array([((2*l+1)/2)*(dCij[i][l]*dCij[j][l])/(ClXX[l]+self.noise_weight(ps)*np.exp((self.experiment.theta*l)**2.0))**2.0 for l in range(2, self.experiment.lmax-1)])
+                fmatrix[i][j]=self.experiment.fsky*np.sum(fijl)
+
+        output.put(np.array(np.matrix(fmatrix)))        
         return np.array(np.matrix(fmatrix))  # numpy array for easy indexing
 
     def fisher(self, XX=['tt', 'te', 'ee', 'bb']):
@@ -127,11 +147,22 @@ class CMBFisher(Fisher):
         total CMB fisher matrix
         """
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
-        for xx in XX:
-            fmatrix=fmatrix+self.fisherXX(xx)
         
+        # scope for using multiprocessing here
+        output=mp.Queue()
+        processes=[mp.Process(target=self.fisherXX, args=(xx, output)) for xx in XX]
+        
+        for p in processes:
+            p.start()
+        for p in processes:
+            p.join()
+        
+        fmats=[output.get() for p in processes]
+        fmatrix=sum(fmats)
+                
         self.fisher_matrix=np.matrix(fmatrix)
-        return fmatrix
+        return self.fisher_matrix
+        
 
     def test_fisher(self):
         """

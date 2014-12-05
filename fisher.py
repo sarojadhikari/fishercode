@@ -147,12 +147,12 @@ class Fisher(object):
         xyaxes=[min(xl)-dx, max(xl)+dx, min(yl)-dy, max(yl)+dy]
         return ellip, xyaxes
             
-    def plot_error_ellipse(self, i, j, xyaxes_input=0):
+    def plot_error_ellipse(self, i, j, xyaxes_input=0, nstd=1, clr='b', alpha=0.5):
         """
         """
         import matplotlib.pyplot as plt
         ax = plt.gca()
-        errorellipse, xyaxes=self.error_ellipse(i,j)
+        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr=clr, alpha=alpha)
         ax.add_artist(errorellipse)
         if (xyaxes_input!=0):
             ax.axis(xyaxes_input)
@@ -162,4 +162,5 @@ class Fisher(object):
         plt.xlabel(self.param_names[i])
         plt.ylabel(self.param_names[j])
         plt.show()
+        return plt
         
