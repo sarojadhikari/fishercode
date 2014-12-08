@@ -68,8 +68,8 @@ class ClusterFisher(Fisher):
         gfratio=gf/gf0
                 
         Mm=self.survey.Mth
-       
-	Mm=self.survey.Mth*(1+self.survey.dlogM*np.log(10))**m 
+        
+        Mm=self.survey.Mth*(1+self.survey.dlogM*np.log(10))**m 
         for i in range(m):
             Mm=Mm+Mm*10**self.survey.dlogM
             
@@ -136,7 +136,7 @@ class ClusterFisher(Fisher):
                 dN.sort()
                 dN=[r[1] for r in dN]
                 #dN[i]=self.Nlm_deriv(l, m, self.parameters[i], self.parameter_values[i])
-                print dN
+                #print dN
  
                 for i in range(self.nparams):
                     for j in range(self.nparams):

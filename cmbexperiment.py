@@ -33,6 +33,15 @@ class CMBExperiment(object):
             self.name=alias
         if name==None:
             self.dOm = degsq2rad(DeltaOmega) # the survey area in degree square is converted to radians square here
+        if name=="CVlimited":
+            """define a cosmic variance limited CMB temperature and polarization experiment
+            with the following properties
+            """
+            if not(alias):
+                self.name="CVlimited"
+            self.lmax=2500
+            self.fsky=0.7
+            
         if name=="Planck":
             if not(alias):
                 self.name="Planck"

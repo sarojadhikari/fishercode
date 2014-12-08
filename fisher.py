@@ -35,7 +35,7 @@ class Fisher(object):
     def fisher(self):
         """
         method to compute the fisher matrix given the parameters, survey and 
-        cosmology definitions for this class   
+        cosmology definitions for this class. The computations are performed in the inherited classes such as :class:`.CMBFisher` and :class:`.ClusterFisher`. 
         """
         # loop over the parameters (and sum over redshift bins) to form the Fisher matrix
         

@@ -41,7 +41,6 @@ class CMBFisher(Fisher):
         """
         params={
             'output': 'tCl',
-            'format': 'camb',
             'l_max_scalars': LMAX,
             'modes': 'st',
             'A_s': self.cosmology.A,
@@ -50,6 +49,7 @@ class CMBFisher(Fisher):
             'h': self.cosmology.h,
             'omega_b': self.cosmology.Ob0*self.cosmology.h**2.0,
             'omega_cdm': self.cosmology.Om0*self.cosmology.h**2.0,
+            'tau_reio': self.cosmology.tau,
             }
         
         if (self.include_polarization):
@@ -146,6 +146,9 @@ class CMBFisher(Fisher):
         """sum over the specified XX=[TT, TE, EE, BB] fisher matrices to get the
         total CMB fisher matrix
         """
+        if (('te' in XX) or ('ee' in XX) or ('bb' in XX)):
+            self.include_polarization = True
+            
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
         # scope for using multiprocessing here

@@ -64,6 +64,9 @@ class cosmo(object):
     
     def set_h(self, h):
         self.h=h
+    
+    def set_tau(self, tau):
+        self.tau=tau
                 
     def rhom(self):
         """
