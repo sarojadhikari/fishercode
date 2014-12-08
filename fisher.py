@@ -43,7 +43,8 @@ class Fisher(object):
     
     def add_priors(self, prior_inf=[]):
         """
-        add prior information 1/sigma^2 to the fisher matrix
+        add prior information 1/sigma^2 to the fisher matrix; the prior matrix is given in
+        percentage, so needs to be multiplied by the parameter values (done below in code).
         """
         if len(prior_inf)>0:
             self.priors=prior_inf
@@ -51,7 +52,7 @@ class Fisher(object):
         prior_matrix=np.array([[0.]*self.nparams]*self.nparams)
         for i in range(self.nparams):
             if self.priors[i]>0:
-                prior_matrix[i][i]=1./self.priors[i]**2.0
+                prior_matrix[i][i]=1./(self.priors[i]*self.parameter_values[i])**2.0
         self.fisher_matrix=self.fisher_matrix+np.matrix(prior_matrix)
         self.prior_information_added=True
         return self.fisher_matrix
