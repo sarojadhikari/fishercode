@@ -3,8 +3,8 @@
 # useful functions in functions.py
 
 from cosmology import cosmo
-from survey import survey
-from clusterfisher import ClusterFisher
+from cluster import survey
+from cluster import ClusterFisher
 
 s1=survey(name='eROSITA')
 

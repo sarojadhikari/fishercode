@@ -44,7 +44,9 @@ class CMBExperiment(object):
             if not(alias):
                 self.name="CVlimited"
             self.lmax=2500
-            self.fsky=0.7
+            self.fsky=0.8
+            # one does not need to worry about wT, wP, and noise per pixel; the weight for the
+            # noise term is set to zero for this experiment in the CMBFisher class.
             
         if name=="Planck":
             if not(alias):
@@ -157,6 +159,8 @@ class CMBFisher(Fisher):
     def noise_weight(self, ps='tt'):
         """return the noise weight for the power spectrum specified
         """
+        if (self.experiment.name=="CVlimited"):
+            return 0.
         if (ps=='tt'):
             return 1./self.experiment.wT
         elif (ps=='ee' or ps =='bb'):

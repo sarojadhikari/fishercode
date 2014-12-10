@@ -83,20 +83,6 @@ class ClusterFisher(Fisher):
         self.cosmology=cosmology
         Fisher.__init__(self, params, param_values, param_names, priors)    
         
-    def number_count_integrand(self, M, z, gfratio):
-        """
-        return the number counts Ni integrand
-        """
-        sigmam=self.cosmology.sigmaM(M)*gfratio 
-        sf=selection_function(self.survey.Mth, M, self.survey.sigma_lnM)
-        expf=np.exp(-np.abs(np.log(1.0/sigmam)+0.64)**3.82)
-        # multiply by the non-Gaussian factor for non-Gaussian cosmology
-        if (self.cosmology.fnl!=0.0):
-            expf=expf*self.cosmology.nGMFfactor(M, gfratio)
-        if (self.cosmology.baryon_hmf_correction!=0):
-            expf=expf*fratio(0,M)
-        return -0.3*self.cosmology.rhom()*self.cosmology.sigmaM_M(M)*gfratio*sf/sigmam/M*expf
-    
     def Nlm_integrand(self, z, M, Mm, Mmp, gfratio):
         """
         retun the integrand for Nlm; for a given l, m value, it assumes that the survey class
