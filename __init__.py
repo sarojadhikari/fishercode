@@ -5,4 +5,6 @@
 
 import cosmology
 import fisher
-import clusterfisher
+import cluster
+import cmb
+

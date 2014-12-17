@@ -137,9 +137,6 @@ class CMBFisher(Fisher):
     def Cls_deriv(self, param, param_value, ps='tt'):
         """compute the numerical derivative of :math:`C_ls`, the angular temperature power spectrum
         with respect to the parameter specified at the given value
-        
-        Note: currently, the implementation is for TT power spectrum; one can easily extend to include
-        EE and BB by summing over
         """
         v=getattr(self.cosmology, param)
         pv=param_value

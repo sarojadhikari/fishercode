@@ -8,7 +8,7 @@
 
 import numpy as np
 from scipy import integrate
-from functions import top_hat, selection_function, Hermite3
+from functions import top_hat, Hermite3
 
 class cosmo(object):
     """ 
