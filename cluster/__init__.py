@@ -1,15 +1,15 @@
 """
-.. module:: survey
+.. module:: cluster
     :synopsis: define a class for a Large Scale Structure (LSS) survey
     
 """
 
-from functions import degsq2rad
+#from functions import degsq2rad
 import numpy as np
 from functions import *
 from scipy import integrate
 from scipy.special import erfc
-from fisher import Fisher
+from ..fisher import Fisher
 import multiprocessing as mp
 
 class Survey:

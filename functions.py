@@ -1,3 +1,9 @@
+"""
+.. module:: functions
+    :synopsis: some useful functions
+
+"""
+
 # define useful functions
 import numpy as np
 from scipy.special import erfc

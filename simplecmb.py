@@ -15,7 +15,7 @@ expt=CMBExperiment(name="Planck")
 #
 cf=CMBFisher(expt, planck13, 
              params=["n", "r", "A"], 
-             param_values=[0.96, 0.1, planck13.A], 
+             param_values=[0.96, 0.05, planck13.A], 
              param_names=['$n_s$', '$r$', '$A$'])
              
 cf.include_polarization=False

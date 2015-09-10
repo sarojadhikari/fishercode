@@ -95,6 +95,12 @@ class cosmo(object):
         """
         return A*(2.*np.pi**2.0)*k**self.n * (2998./self.h)**(3.+self.n)*(self.transfer_function(k)*self.growth_factor(0.0))**2.0
     
+    def power_spectrum_bbks(self, A, k):
+        """
+        return the matter power spectrum using bbks transfer function
+        """
+        return A*(2.*np.pi**2.0)*k**self.n * (2998./self.h)**(3.+self.n)*(self.transfer_function_bbks(k)*self.growth_factor(0.0))**2.0
+        
     def sigma_sq_integrand(self, k, R):
         return k*k/(2.0*np.pi**2.0)*self.power_spectrum0(self.A, k)*top_hat(k,R)**2.0
     
@@ -146,7 +152,8 @@ class cosmo(object):
         return the product of transfer function and the growth factor at a wavenumber k and redshift
         z with other appropriate factors; alpha relates the primordial gravitational potential to the overdensity
         """
-        return 2.0*k*k*self.transfer_function(k)*self.growth_factor(z)/(3.0*self.Om0*self.H0**2.0)
+        c=299792.458 # speed of light in km/s
+        return 2.0*k*k*self.transfer_function(k)*self.growth_factor(z)*c*c/(3.0*self.Om0*self.H0**2.0)
     
     def growth_factor_integrand(self, z):
         """
@@ -159,7 +166,9 @@ class cosmo(object):
         """
         return the growth factor D(z)
         """
-        result=integrate.quad(self.growth_factor_integrand, z, 1000)
+        if (z==0):
+            return 0.78
+        result=integrate.quad(self.growth_factor_integrand, z, 1000) # therefore only valid at z<<1000.
         hubblez=100*self.h*np.sqrt(self.Om0*pow(1+z,3.0)+(1-self.Om0))
         return (5.0*self.Om0*hubblez/(2*100.*self.h))*result[0]
     
@@ -168,6 +177,19 @@ class cosmo(object):
         return the function :math:`E(z)=\sqrt{\Omega_m(1+z)^3+\Omega_\Lambda}` 
         """
         return np.sqrt(self.Om0*(1+z)**3.0+(1-self.Om0))
+
+    def comoving_distance_integrand(self, z):
+        return 1./self.E(z)
+    
+    def comoving_distance(self, z):
+        """
+        return the comoving distance :math:`D(z) = \int \frac{c dt}{a}`
+        as a function of the redshift
+        """
+        c=299792.458 # speed of light in km/s
+        result=(c/self.H0)*integrate.quad(self.comoving_distance_integrand, 0.0, z)[0]
+        return result
+        
     
     def fnl2M3(self, fnl):
         return fnl*0.0003 # this is wealkly cosmology dependent -- ignore the cosmology dependence for now
@@ -203,6 +225,15 @@ class cosmo(object):
         result=integrate.quad(self.volume_factor_integrand, z-dz/2.0, z+dz/2.0)
         return result[0]       
 
+    def transfer_function_bbks(self, k):
+        """
+        return the fitting formula for transfer function by 
+        Bardeen, Bond, Kaiser, and Szalay (1986, BBKS)
+        
+        Eq 7.71 of Dodelson
+        """
+        q=k/self.Om0/self.h
+        return np.log(1+2.34*q)/(2.34*q)*(1+3.89*q+(16.2*q)**2.0+(5.47*q)**3.0+(6.71*q)**4.0)**(-0.25)
         
     def transfer_function(self, k):
         """
@@ -217,7 +248,7 @@ class cosmo(object):
         f_baryon=self.f_baryon
         omhh=self.Om0*self.h**2.0
         obhh=omhh*f_baryon
-        h=self.h
+        #h=self.h
         
         z_equality=2.50e4*omhh/theta_cmb**4.0
         k_equality=0.0746*omhh/theta_cmb**2.0
@@ -248,10 +279,10 @@ class cosmo(object):
         beta_node = 8.41*pow(omhh, 0.435)
         beta_b = 0.5+f_baryon+(3.-2.*f_baryon)*np.sqrt(pow(17.2*omhh,2.0)+1)
 
-        k_peak = 2.5*3.14159*(1+0.217*omhh)/sound_horizon
-        sound_horizon_fit = 44.5*np.log(9.83/omhh)/np.sqrt(1+10.0*pow(obhh,0.75))
+        #k_peak = 2.5*3.14159*(1+0.217*omhh)/sound_horizon
+        #sound_horizon_fit = 44.5*np.log(9.83/omhh)/np.sqrt(1+10.0*pow(obhh,0.75))
 
-        alpha_gamma = 1-0.328*np.log(431.0*omhh)*f_baryon + 0.38*np.log(22.3*omhh)*f_baryon**2.0;
+        #alpha_gamma = 1-0.328*np.log(431.0*omhh)*f_baryon + 0.38*np.log(22.3*omhh)*f_baryon**2.0;
         
         # the TFfit_onek code starts from here
         # ====================================        

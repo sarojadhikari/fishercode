@@ -1,15 +1,17 @@
 """
-.. module:: cmbexperiment
+.. module:: cmb
     :synopsis: define a class for a CMB experiment
     
 """
 
+#import sys
+#sys.path.append("/home/adhikari/Projects/fishercode/")
 import numpy as np
 
-from functions import *
-from fisher import Fisher
+from ..fisher import Fisher
 from classy import Class
 import multiprocessing as mp
+from ..functions import degsq2rad, deg2rad
 
 class CMBExperiment(object):
     """ CMB experiment class
@@ -79,7 +81,7 @@ class CMBFisher(Fisher):
         self.cosmology=cosmology
         self.include_polarization=pol
         Fisher.__init__(self, params, param_values, param_names, priors)
-            
+    
     def theoryCls(self, LMAX):
         """get the theoretical :math:`C_l` values for the current cosmology using CLASS code.
         The cosmological parameters are set from the current :class:`.cosmology`.
