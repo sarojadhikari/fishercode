@@ -7,7 +7,7 @@
 """
 
 import numpy as np
-from functions import *
+from ..functions import *
 from matplotlib.patches import Ellipse
 
 class Fisher(object): 

@@ -6,7 +6,7 @@
 
 #from functions import degsq2rad
 import numpy as np
-from functions import *
+from ..functions import xx, fratio, dndlnM, degsq2rad
 from scipy import integrate
 from scipy.special import erfc
 from ..fisher import Fisher
