@@ -8,10 +8,10 @@
 #sys.path.append("/home/adhikari/Projects/fishercode/")
 import numpy as np
 
-from fisher import Fisher
+from ..fisher import Fisher
 from classy import Class
 import multiprocessing as mp
-from functions import degsq2rad, deg2rad
+from ..functions import degsq2rad, deg2rad
 
 class CMBExperiment(object):
     """ CMB experiment class
