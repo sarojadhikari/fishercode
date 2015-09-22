@@ -3,8 +3,8 @@
 # useful functions in functions.py
 
 from cosmology import cosmo
-from cmbexperiment import CMBExperiment
-from cmbfisher import CMBFisher 
+from cmb.cmbexperiment import CMBExperiment
+from cmb.cmbfisher import CMBFisher 
 
 planck13=cosmo() # the default Planck 2013 cosmology
 expt=CMBExperiment(name="Planck")
