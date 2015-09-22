@@ -1,1 +1,1 @@
- 
+from bispectrum import *
