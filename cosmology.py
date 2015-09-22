@@ -28,7 +28,7 @@ class cosmo(object):
     Neff=3.046
     flat=True
     m_nu=[0., 0., 0.06]
-    f_baryon=0.014
+    f_baryon=Ob0/Om0
     h=H0/100.
     A=1.0
     fnl=0.0    # cosmology class allows for the primordial skewness to be non-zero.
@@ -89,10 +89,18 @@ class cosmo(object):
         """
         return  A*(k/k0)**(self.n-1)
     
+    def power_spectrumz(self, k, z=0):
+        """
+        returns the matter power spectrum at wave number k at a redshift z
+        """
+        return self.power_spectrum0(self.A, k)*np.power(self.growth_factor(z)/self.growth_factor(0.), 2.0)
+    
     def power_spectrum0(self, A, k):
         """
         returns the matter power spectrum value at wave number k, given A at z=0
         """
+        if A==0.:
+            A=self.A
         return A*(2.*np.pi**2.0)*k**self.n * (2998./self.h)**(3.+self.n)*(self.transfer_function(k)*self.growth_factor(0.0))**2.0
     
     def power_spectrum_bbks(self, A, k):
@@ -101,6 +109,20 @@ class cosmo(object):
         """
         return A*(2.*np.pi**2.0)*k**self.n * (2998./self.h)**(3.+self.n)*(self.transfer_function_bbks(k)*self.growth_factor(0.0))**2.0
         
+    def growth_rate_f(self, z, factor=1.0001):
+        """
+        return the growth rate f = dlnD/dlna at the given redshift
+        the code limits the smallest z input
+        """
+        if (z<=10*(factor-1)):
+            z=10*(factor-1)
+        a = 1.0/(1.0+z)
+        aplus = factor*a
+        zplus = 1/aplus - 1
+        Dplus = np.log(self.growth_factor(zplus))
+        D0 = np.log(self.growth_factor(z))
+        return (Dplus - D0)/(np.log(aplus)-np.log(a))
+    
     def sigma_sq_integrand(self, k, R):
         return k*k/(2.0*np.pi**2.0)*self.power_spectrum0(self.A, k)*top_hat(k,R)**2.0
     
