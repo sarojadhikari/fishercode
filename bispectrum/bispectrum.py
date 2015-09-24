@@ -27,7 +27,7 @@ class ibkLFisher(Fisher):
         #NkL=10.
         sigma=b1*np.sqrt(self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        cpower = b1*b1*self.conv_power_spectrumz(k, L=Lbox)
+        cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
         term1 = np.power(sigma, 2.0) + self.survey.Pshot/np.power(Lbox, 3.0)
         term2 = cpower + self.survey.Pshot
         
@@ -35,9 +35,14 @@ class ibkLFisher(Fisher):
         
     
     def sigmadLSq(self, Lbox=600.):
-        integrand = lambda k: np.power(top_hat(k, Lbox), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
+        integrand = lambda k: np.power(top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
+        #integrand = lambda kx, ky, kz: np.power(np.sinc(kx*Lbox/2.0)*np.sinc(ky*Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(np.sqrt(kx**2.0+ky**2.0+kz**2.0), self.survey.z)
+        lb = self.survey.kmin/2.0
+        ub = self.survey.kmax*2.0
+        #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
         results = quad(integrand, 0., np.infty)
-        return results[0]/np.power(Lbox, 6.0)/2./np.pi/np.pi
+        #return results[0]/np.power(2.*np.pi, 3.0)
+        return results[0]/(2.*np.pi**2.0)
     
     def ibSPT(self, k, b1):
         return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))*np.power(b1, 3.0)
@@ -120,6 +125,7 @@ class Survey:
         
         self.fNLfid=fNLfid
         self.Lsurvey=Lsurvey
+        self.kmin = 2.*np.pi/self.Lsurvey
         self.Lboxes=Lboxes
         self.Nsub = len(self.Lboxes)
     
