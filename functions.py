@@ -27,6 +27,11 @@ def selection_function(Mth, M, sigma_lnM):
     """
     return 0.5*erfc((np.log(Mth)-np.log(M))/(np.sqrt(2*sigma_lnM**2.0)))
 
+def cubic_top_hat(L, kx, ky=0.0, kz=0.0):
+    """return the Fourier transform of a cubic box top hat function
+    """
+    return np.power(L, 3.0)*np.sinc(kx*L/2.0)*np.sinc(ky*L/2.0)*np.sinc(kz*L/2.0)
+
 def top_hat(k, R):
     """
     return the Fourier top hat
