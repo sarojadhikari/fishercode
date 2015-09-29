@@ -8,4 +8,4 @@ fidcosmo.set_sigma8(0.79)
 survey=fc.bispectrum.Survey()
 
 bf=fc.bispectrum.ibkLFisher(survey, fidcosmo, params=["fNL", "b1"], param_names=["fNL", "b1"])
-bf.fisher(skip=5.0)
+bf.fisher(skip=2.0)

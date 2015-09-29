@@ -16,6 +16,7 @@ class ibkLFisher(Fisher):
         self.cosmology=cosmology
         Fisher.__init__(self, params, param_values, param_names, priors)
         self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])  # compute all the sigmaLsq values at once
+        self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
     
     def DeltaibSq(self, k=0.5, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
@@ -33,6 +34,11 @@ class ibkLFisher(Fisher):
         
         return Vfactor * term1 * np.power(term2, 2.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 2.0)
         
+
+    def sigmadLSqfNL(self, Lbox=600.):
+        integrand = lambda k: np.power(top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
+        results = quad(integrand, 0., np.infty)
+        return results[0]/(2.*np.pi**2.0)/np.power(Lbox, 3.0)
     
     def sigmadLSq(self, Lbox=600.):
         integrand = lambda k: np.power(top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
@@ -42,7 +48,7 @@ class ibkLFisher(Fisher):
         #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
         results = quad(integrand, 0., np.infty)
         #return results[0]/np.power(2.*np.pi, 3.0)
-        return results[0]/(2.*np.pi**2.0)
+        return results[0]/(2.*np.pi**2.0)/np.power(Lbox, 3.0)
     
     def ibSPT(self, k, b1):
         return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))*np.power(b1, 3.0)
@@ -50,34 +56,33 @@ class ibkLFisher(Fisher):
     def ibb2(self, k, b1, b2):
         return 2.*np.power(b1, 2.0)*b2
     
-    def ibfNL(self, k, b1, fNL=0.):
-        return 4.*fNL*np.power(b1, 3.0)
+    def ibfNL(self, k, b1, fNL=0., box=0):
+        return 4.*fNL*np.power(b1, 3.0)*self.sigmaSqsfNL[box]/self.sigmaSqs[box]
         
-    def ibtotal(self, k, b1, b2, fNL):
-        return self.ibfNL(k, b1, fNL)+self.ibSPT(k, b1)+self.ibb2(k, b1, b2)
+    def ibtotal(self, k, b1, b2, fNL, box=0):
+        return self.ibfNL(k, b1, fNL, box=box)+self.ibSPT(k, b1)+self.ibb2(k, b1, b2)
     
-    def ibk_deriv(self, k, param="fNL"):
+    def ibk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
         since the fid fNL parameter can be 0, lets use param+0.01 for finite difference
         of fNL, and fac=1.01 for the bias parameters that have non-zero fid values
         """
         fac=1.01
         sv=self.survey
-        ibtfid=self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid)
+        ibtfid=self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
         if param=="fNL":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01)-ibtfid
+            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ibtfid
             return ibkdif/(0.01)
         if param=="b1":
-            ibkdif = self.ibtotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid)-ibtfid
+            ibkdif = self.ibtotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
             return ibkdif/((fac-1)*self.survey.b1fid)
         if param=="b2":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid)-ibtfid
+            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
             return ibkdif/((fac-1)*self.survey.b2fid)
             
     def fisher(self, skip=1.):
         """skip defines the binning scheme
         """
-            
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
         for i in range(self.nparams):
@@ -86,7 +91,7 @@ class ibkLFisher(Fisher):
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
                     klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.ibk_deriv(k, param=self.param_names[i])*self.ibk_deriv(k, param=self.param_names[j])/self.DeltaibSq(k, box=box) for k in klist])
+                    dibk_list = np.array([self.ibk_deriv(k, param=self.param_names[i], box=box)*self.ibk_deriv(k, param=self.param_names[j], box=box)/self.DeltaibSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
 
@@ -121,7 +126,6 @@ class Survey:
         self.b2fid=b2fid
         self.ngbar=ngbar
         self.Pshot = 1./self.ngbar
-        #self.NkL = np.power(self.kmax, self.kmin, 3.0)
         
         self.fNLfid=fNLfid
         self.Lsurvey=Lsurvey
