@@ -17,18 +17,19 @@ class ibkLFisher(Fisher):
         Fisher.__init__(self, params, param_values, param_names, priors)
         self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])  # compute all the sigmaLsq values at once
         self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
+        
     
     def DeltaibSq(self, k=0.5, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
         Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
         kmin = 2.*np.pi/Lbox
-        kmax = self.survey.kmax
+        #kmax = self.survey.kmax
         b1 = self.survey.b1fid
-        NkL = np.power(k/kmin, 2.0)  # check this
-        #NkL=10.
-        sigma=b1*np.sqrt(self.sigmaSqs[box])
+        #NkL = np.power(k/kmin, 2.0)  # check this
+        NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
+        sigma=1.27*b1*np.sqrt(self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
+        cpower = 1.27*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
         term1 = np.power(sigma, 2.0) + self.survey.Pshot/np.power(Lbox, 3.0)
         term2 = cpower + self.survey.Pshot
         
@@ -51,17 +52,27 @@ class ibkLFisher(Fisher):
         return results[0]/(2.*np.pi**2.0)
     
     def ibSPT(self, k, b1):
-        return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))*np.power(b1, 3.0)
+        return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))/b1
     
     def ibb2(self, k, b1, b2):
-        return 2.*np.power(b1, 2.0)*b2
+        return 2.*b2/np.power(b1, 2.0)
     
     def ibfNL(self, k, b1, fNL=0., box=0):
-        return 4.*fNL*np.power(b1, 3.0)*self.sigmaSqsfNL[box]/self.sigmaSqs[box]
+        return 4.*fNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/b1
         
     def ibtotal(self, k, b1, b2, fNL, box=0):
-        return self.ibfNL(k, b1, fNL, box=box)+self.ibSPT(k, b1)+self.ibb2(k, b1, b2)
-    
+        Kb = self.Kaiser_factor(b1)
+        #Kb=1.0
+        return Kb*(self.ibfNL(k, b1, fNL, box=box)+self.ibSPT(k, b1)+self.ibb2(k, b1, b2))
+        
+    def Kaiser_factor(self, b1):
+        """return the Kaiser factor 1 + 2./3 beta + 1./9 beta^2
+        where beta = f/b1
+        """
+        f = self.cosmology.growth_rate_f(self.survey.z)
+        beta = f/b1
+        return 1.+ (2./3)*beta + (1./9)*np.power(beta, 2.0)
+        
     def ibk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
         since the fid fNL parameter can be 0, lets use param+0.01 for finite difference
@@ -75,10 +86,10 @@ class ibkLFisher(Fisher):
             return ibkdif/(0.01)
         if param=="b1":
             ibkdif = self.ibtotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1)*self.survey.b1fid)
+            return ibkdif/((fac-1.0)*self.survey.b1fid)
         if param=="b2":
             ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1)*self.survey.b2fid)
+            return ibkdif/((fac-1.0)*self.survey.b2fid)
             
     def fisher(self, skip=1.):
         """skip defines the binning scheme
