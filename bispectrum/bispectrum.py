@@ -36,19 +36,19 @@ class ibkLFisher(Fisher):
         
 
     def sigmadLSqfNL(self, Lbox=600.):
-        integrand = lambda k: np.power(top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
+        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
         results = quad(integrand, 0., np.infty)
-        return results[0]/(2.*np.pi**2.0)/np.power(Lbox, 3.0)
+        return results[0]/(2.*np.pi**2.0)
     
     def sigmadLSq(self, Lbox=600.):
-        integrand = lambda k: np.power(top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
+        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
         #integrand = lambda kx, ky, kz: np.power(np.sinc(kx*Lbox/2.0)*np.sinc(ky*Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(np.sqrt(kx**2.0+ky**2.0+kz**2.0), self.survey.z)
-        lb = self.survey.kmin/2.0
-        ub = self.survey.kmax*2.0
+        #lb = self.survey.kmin/2.0
+        #ub = self.survey.kmax*2.0
         #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
         results = quad(integrand, 0., np.infty)
         #return results[0]/np.power(2.*np.pi, 3.0)
-        return results[0]/(2.*np.pi**2.0)/np.power(Lbox, 3.0)
+        return results[0]/(2.*np.pi**2.0)
     
     def ibSPT(self, k, b1):
         return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))*np.power(b1, 3.0)
@@ -119,7 +119,7 @@ class Survey:
     """ large-scale structure survey class with fixed z but kmin/kmax and V specified
     """
     
-    def __init__(self, z=0.57, kmax=0.17, b1fid=1.95, b2fid=0.5, fNLfid=10, Lsurvey=1500., ngbar=0.2248, Lboxes=[100., 200., 300., 400.]):
+    def __init__(self, z=0.57, kmax=0.17, b1fid=1.95, b2fid=0.5, fNLfid=0., Lsurvey=1500., ngbar=0.2248, Lboxes=[100., 200., 300., 400.]):
         self.z=z
         self.kmax=kmax+0.00001
         self.b1fid=b1fid

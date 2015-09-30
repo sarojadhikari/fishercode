@@ -142,8 +142,8 @@ class Fisher(object):
         xypos=[self.parameter_values[i], self.parameter_values[j]]
         ellip = Ellipse(xy=xypos, width=width, height=height, angle=theta, color=clr, alpha=alpha)
         ellip_vertices=ellip.get_verts()
-        xl=[ellip_vertices[i][0] for i in range(len(ellip_vertices))]
-        yl=[ellip_vertices[i][1] for i in range(len(ellip_vertices))]
+        xl=[ellip_vertices[k][0] for k in range(len(ellip_vertices))]
+        yl=[ellip_vertices[k][1] for k in range(len(ellip_vertices))]
         dx=(max(xl)-min(xl))/space_factor
         dy=(max(yl)-min(yl))/space_factor
         xyaxes=[min(xl)-dx, max(xl)+dx, min(yl)-dy, max(yl)+dy]
