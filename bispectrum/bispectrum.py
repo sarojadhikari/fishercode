@@ -153,7 +153,7 @@ class itkLFisher(ibkLFisher):
         return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
    
     def itgNL(self, k, b1, gNL, box=0):
-        return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)
+        return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
         
     def ittotal(self, k, b1, b2, gNL, box=0):
         """return the total integrated trispectrum in the squeezed limit, and
@@ -169,16 +169,16 @@ class itkLFisher(ibkLFisher):
         """
         fac=1.01
         sv=self.survey
-        ibtfid=self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
+        ittfid=self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
         if param=="fNL":
-            ibkdif = self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ibtfid
-            return ibkdif/(0.01)
+            itkdif = self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ittfid
+            return itkdif/(0.01)
         if param=="b1":
-            ibkdif = self.ittotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1.0)*self.survey.b1fid)
+            itkdif = self.ittotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ittfid
+            return itkdif/((fac-1.0)*self.survey.b1fid)
         if param=="b2":
-            ibkdif = self.ittotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1.0)*self.survey.b2fid)
+            itkdif = self.ittotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ittfid
+            return itkdif/((fac-1.0)*self.survey.b2fid)
             
     def fisher(self, skip=1.):
         """skip defines the binning scheme
@@ -191,7 +191,7 @@ class itkLFisher(ibkLFisher):
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
                     klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.itk_deriv(k, param=self.param_names[i], box=box)*self.ibk_deriv(k, param=self.param_names[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
+                    dibk_list = np.array([self.itk_deriv(k, param=self.param_names[i], box=box)*self.itk_deriv(k, param=self.param_names[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
 
