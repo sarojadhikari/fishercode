@@ -61,7 +61,7 @@ class ibkLFisher(Fisher):
         return 4.*fNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/b1
         
     def ibtotal(self, k, b1, b2, fNL, box=0):
-        Kb = self.Kaiser_factor(b1)
+        Kb = self.Kaiser_factor_b(b1)
         #Kb=1.0
         return Kb*(self.ibfNL(k, b1, fNL, box=box)+self.ibSPT(k, b1)+self.ibb2(k, b1, b2))
     
@@ -141,17 +141,26 @@ class itkLFisher(ibkLFisher):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
         Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
         kmin = 2.*np.pi/Lbox
-        #kmax = self.survey.kmax
         b1 = self.survey.b1fid
-        #NkL = np.power(k/kmin, 2.0)  # check this
+        Kp = self.Kaiser_factor_p(b1)
         NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
-        sigma=1.27*b1*np.sqrt(self.sigmaSqs[box])
+        sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        cpower = 1.27*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
+        cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
         term1 = np.power(sigma, 2.0) + self.survey.Pshot/np.power(Lbox, 3.0)
         term2 = cpower + self.survey.Pshot
         
         return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
+   
+    def itgNL(self, k, b1, gNL, box=0):
+        return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)
+        
+    def ittotal(self, k, b1, b2, gNL, box=0):
+        """return the total integrated trispectrum in the squeezed limit, and
+        when the rest of the three modes form a equilateral triangle with
+        wave number amplitude k
+        """
+        return self.itgNL(k, b1, gNL, box=box)
         
     def itk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
@@ -162,13 +171,13 @@ class itkLFisher(ibkLFisher):
         sv=self.survey
         ibtfid=self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
         if param=="fNL":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ibtfid
+            ibkdif = self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ibtfid
             return ibkdif/(0.01)
         if param=="b1":
-            ibkdif = self.ibtotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
+            ibkdif = self.ittotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
             return ibkdif/((fac-1.0)*self.survey.b1fid)
         if param=="b2":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
+            ibkdif = self.ittotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
             return ibkdif/((fac-1.0)*self.survey.b2fid)
             
     def fisher(self, skip=1.):
