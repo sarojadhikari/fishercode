@@ -109,7 +109,7 @@ class ibkLFisher(Fisher):
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
                     klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.ibk_deriv(k, param=self.param_names[i], box=box)*self.ibk_deriv(k, param=self.param_names[j], box=box)/self.DeltaibSq(k, box=box) for k in klist])
+                    dibk_list = np.array([self.ibk_deriv(k, param=self.parameters[i], box=box)*self.ibk_deriv(k, param=self.parameters[j], box=box)/self.DeltaibSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
 
@@ -194,7 +194,7 @@ class itkLFisher(ibkLFisher):
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
                     klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.itk_deriv(k, param=self.param_names[i], box=box)*self.itk_deriv(k, param=self.param_names[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
+                    dibk_list = np.array([self.itk_deriv(k, param=self.params[i], box=box)*self.itk_deriv(k, param=self.params[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
 

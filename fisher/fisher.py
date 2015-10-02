@@ -18,6 +18,7 @@ class Fisher(object):
     """
     def __init__(self, params=[], param_values=[], param_names=[], priors=[]):
         self.parameters=params
+        self.params=params
         self.parameter_values=param_values
         self.nparams=len(params)
         self.priors=priors
