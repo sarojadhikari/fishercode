@@ -9,6 +9,7 @@
 import numpy as np
 from ..functions import *
 from matplotlib.patches import Ellipse
+import matplotlib.pyplot as plt
 
 class Fisher(object): 
     """
@@ -119,7 +120,7 @@ class Fisher(object):
         sigma_ij=self.covariance_matrix.item(i,j)
         return sigma_ij/self.sigma_i(i)/self.sigma_i(j)
      
-    def error_ellipse(self, i, j, nstd=1, space_factor=3, clr='b', alpha=0.5):
+    def error_ellipse(self, i, j, nstd=1, space_factor=5., clr='b', alpha=0.5):
         """
         return the plot of the error ellipse from the covariance matrix
         use ideas from error_ellipse.m from 
@@ -166,3 +167,27 @@ class Fisher(object):
         plt.show()
         return plt
         
+    def plot_error_matrix(self, params, nstd=2):
+        """ plot a matrix of fisher forecast error ellipses given the
+        list of parameters provided
+        """
+        fac = len(params)-1
+        #plt.figure(num=None, figsize=(fac*xs, fac*ys))
+        
+        f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
+        if fac<2:
+            errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.5)
+            allaxes.add_artist(errorellipse)
+            allaxes.axis(xyaxes)
+        else:
+            for j in params:
+                for i in params:
+                    if (j>i):
+                        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=2, clr="b", alpha=0.5)
+                        jp=j-1
+                        ip=i
+                        allaxes[jp][ip].add_artist(errorellipse)
+                        allaxes[jp][ip].axis(xyaxes)
+                        allaxes[jp][ip].set_xlabel(self.param_names[i])
+                        allaxes[jp][ip].set_ylabel(self.param_names[j])
+                        #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
