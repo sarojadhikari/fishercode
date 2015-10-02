@@ -155,12 +155,15 @@ class itkLFisher(ibkLFisher):
     def itgNL(self, k, b1, gNL, box=0):
         return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
         
+    def itSPT(self, k, b1):
+        return 1./b1/b1/100.
+        
     def ittotal(self, k, b1, b2, gNL, box=0):
         """return the total integrated trispectrum in the squeezed limit, and
         when the rest of the three modes form a equilateral triangle with
         wave number amplitude k
         """
-        return self.itgNL(k, b1, gNL, box=box)
+        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)
         
     def itk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
