@@ -7,7 +7,7 @@
 """
 
 import numpy as np
-from ..functions import *
+#from ..functions import *
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 
@@ -94,7 +94,7 @@ class Fisher(object):
         save the current fisher matrix and relevant information in the DETF format as name.fisher
         """
         hd=""
-        for param in parameters:
+        for param in self.parameters:
             hd=hd+param+" "
             
         np.savetext(fname, self.fisher_matrix, header=hd)
@@ -176,19 +176,27 @@ class Fisher(object):
         #plt.figure(num=None, figsize=(fac*xs, fac*ys))
         
         f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
+        for i in range(fac):
+            for j in range(fac):
+                if (j>i):
+                    allaxes[i][j].axis('off')
+                    
         if fac<2:
             errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.5)
             allaxes.add_artist(errorellipse)
             allaxes.axis(xyaxes)
+            allaxes.set_xlabel(self.param_names[0])
+            allaxes.set_ylabel(self.param_names[1])
+            
         else:
             for j in params:
                 for i in params:
                     if (j>i):
                         errorellipse, xyaxes=self.error_ellipse(i,j, nstd=2, clr="b", alpha=0.5)
-                        jp=j-1
-                        ip=i
-                        allaxes[jp][ip].add_artist(errorellipse)
-                        allaxes[jp][ip].axis(xyaxes)
-                        allaxes[jp][ip].set_xlabel(self.param_names[i])
-                        allaxes[jp][ip].set_ylabel(self.param_names[j])
+                        jp=i
+                        ip=j-1
+                        allaxes[ip][jp].add_artist(errorellipse)
+                        allaxes[ip][jp].axis(xyaxes)
+                        allaxes[ip][jp].set_xlabel(self.param_names[i])
+                        allaxes[ip][jp].set_ylabel(self.param_names[j])
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
