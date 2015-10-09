@@ -211,7 +211,16 @@ class cosmo(object):
         c=299792.458 # speed of light in km/s
         result=(c/self.H0)*integrate.quad(self.comoving_distance_integrand, 0.0, z)[0]
         return result
-        
+
+    def Hubble(self,z):
+        return self.H0*(1+z)*np.sqrt(self.Om0*(1+z)+1-self.Om0)
+    
+    def cmb_lensing_kernel(self, z):
+        c=299792.458 # speed of light in km/s
+        com_dist=self.comoving_distance(z)
+        com_dist_lss=self.comoving_distance(1100.)
+        result = 3.*self.Om0*self.H0**2.0*(1+z)*com_dist*(com_dist_lss-com_dist)/(2.*c*com_dist_lss*self.Hubble(z))
+        return result
     
     def fnl2M3(self, fnl):
         return fnl*0.0003 # this is wealkly cosmology dependent -- ignore the cosmology dependence for now
