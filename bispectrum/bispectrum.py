@@ -4,6 +4,8 @@ from ..functions import top_hat
 from scipy.integrate import quad, nquad
 import numpy as np
 
+QLIMIT=200
+
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
     bispectrum that gives the position dependent power spectrum, and methods to 
@@ -14,9 +16,21 @@ class ibkLFisher(Fisher):
         """
         self.survey=survey
         self.cosmology=cosmology
+
+        for pn in range(len(params)):
+            if params[pn]=="fNL":
+                self.fNLfid=param_values[pn]
+            if params[pn]=="b1":
+                self.b1fid=param_values[pn]
+            if params[pn]=="b2":
+                self.b2fid=param_values[pn]
+            if params[pn]=="b3":
+                self.b3fid=param_values[pn]
+        
         Fisher.__init__(self, params, param_values, param_names, priors)
         self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])  # compute all the sigmaLsq values at once
         self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
+        self.sigmaSqsWL = np.array([self.sigmaWLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
         
     
     def DeltaibSq(self, k=0.5, box=0):
@@ -24,7 +38,7 @@ class ibkLFisher(Fisher):
         Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
         kmin = 2.*np.pi/Lbox
         #kmax = self.survey.kmax
-        b1 = self.survey.b1fid
+        b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
         #NkL = np.power(k/kmin, 2.0)  # check this
         NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
@@ -35,10 +49,16 @@ class ibkLFisher(Fisher):
         
         return Vfactor * term1 * np.power(term2, 2.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 2.0)
         
+    def sigmaWLSq(self, Lbox=600.):
+        """the integrand only has the window function and not the power spectrum
+        """
+        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)
+        results = quad(integrand, 0., np.infty, limit=QLIMIT)
+        return results[0]/(2.*np.pi**2.0)
 
     def sigmadLSqfNL(self, Lbox=600.):
         integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
-        results = quad(integrand, 0., np.infty)
+        results = quad(integrand, 0., np.infty, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
     
     def sigmadLSq(self, Lbox=600.):
@@ -47,7 +67,7 @@ class ibkLFisher(Fisher):
         #lb = self.survey.kmin/2.0
         #ub = self.survey.kmax*2.0
         #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
-        results = quad(integrand, 0., np.infty)
+        results = quad(integrand, 0., np.infty, limit=QLIMIT)
         #return results[0]/np.power(2.*np.pi, 3.0)
         return results[0]/(2.*np.pi**2.0)
     
@@ -86,17 +106,17 @@ class ibkLFisher(Fisher):
         of fNL, and fac=1.01 for the bias parameters that have non-zero fid values
         """
         fac=1.01
-        sv=self.survey
-        ibtfid=self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
+
+        ibtfid=self.ibtotal(k, self.b1fid, self.b2fid, self.fNLfid, box=box)
         if param=="fNL":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ibtfid
+            ibkdif = self.ibtotal(k, self.b1fid, self.b2fid, self.fNLfid+0.01, box=box)-ibtfid
             return ibkdif/(0.01)
         if param=="b1":
-            ibkdif = self.ibtotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1.0)*self.survey.b1fid)
+            ibkdif = self.ibtotal(k, self.b1fid*fac, self.b2fid, self.fNLfid, box=box)-ibtfid
+            return ibkdif/((fac-1.0)*self.b1fid)
         if param=="b2":
-            ibkdif = self.ibtotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ibtfid
-            return ibkdif/((fac-1.0)*self.survey.b2fid)
+            ibkdif = self.ibtotal(k, self.b1fid, self.b2fid*fac, self.fNLfid, box=box)-ibtfid
+            return ibkdif/((fac-1.0)*self.b2fid)
             
     def fisher(self, skip=1.):
         """skip defines the binning scheme
@@ -130,7 +150,7 @@ class ibkLFisher(Fisher):
         fac = 2.*np.pi/(np.power(2.*np.pi*L, 3.0))
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
-        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]])
+        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], limit=QLIMIT)
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
@@ -141,7 +161,7 @@ class itkLFisher(ibkLFisher):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
         Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
         kmin = 2.*np.pi/Lbox
-        b1 = self.survey.b1fid
+        b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
         NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
@@ -156,32 +176,41 @@ class itkLFisher(ibkLFisher):
         return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
         
     def itSPT(self, k, b1):
-        return 1./b1/b1/100.
+        return (54./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         
-    def ittotal(self, k, b1, b2, gNL, box=0):
+    def itL3(self, k, b1, b2, box=0):
+        return 6.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
+        
+    def itL4(self, k, b1, b3, box=0):
+        return 3.*(b3/b1**3.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
+        
+    def ittotal(self, k, b1, b2, b3, gNL, box=0):
         """return the total integrated trispectrum in the squeezed limit, and
         when the rest of the three modes form a equilateral triangle with
         wave number amplitude k
         """
-        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)
+        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)+ self.itL4(k, b1, b3, box) +self.itL3(k, b1, b2, box)+(10.*b2/b1**3.0)
         
     def itk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
         since the fid fNL parameter can be 0, lets use param+0.01 for finite difference
         of fNL, and fac=1.01 for the bias parameters that have non-zero fid values
         """
-        fac=1.01
-        sv=self.survey
-        ittfid=self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid, box=box)
+        dif=0.001
+
+        ittfid=self.ittotal(k, self.b1fid, self.b2fid, self.b3fid, self.fNLfid, box=box)
         if param=="fNL":
-            itkdif = self.ittotal(k, sv.b1fid, sv.b2fid, sv.fNLfid+0.01, box=box)-ittfid
-            return itkdif/(0.01)
+            itkdif = self.ittotal(k, self.b1fid, self.b2fid, self.b3fid, self.fNLfid+dif, box=box)-ittfid
+            return itkdif/(dif)
         if param=="b1":
-            itkdif = self.ittotal(k, sv.b1fid*fac, sv.b2fid, sv.fNLfid, box=box)-ittfid
-            return itkdif/((fac-1.0)*self.survey.b1fid)
+            itkdif = self.ittotal(k, self.b1fid+dif, self.b2fid, self.b3fid, self.fNLfid, box=box)-ittfid
+            return itkdif/(dif)
         if param=="b2":
-            itkdif = self.ittotal(k, sv.b1fid, sv.b2fid*fac, sv.fNLfid, box=box)-ittfid
-            return itkdif/((fac-1.0)*self.survey.b2fid)
+            itkdif = self.ittotal(k, self.b1fid, self.b2fid+dif, self.b3fid, self.fNLfid, box=box)-ittfid
+            return itkdif/(dif)
+        if param=="b3":
+            itkdif = self.ittotal(k, self.b1fid, self.b2fid, self.b3fid+dif, self.fNLfid, box=box)-ittfid
+            return itkdif/(dif)
             
     def fisher(self, skip=1.):
         """skip defines the binning scheme
@@ -200,20 +229,26 @@ class itkLFisher(ibkLFisher):
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
+        
+    def dlnPkdlnk(self, k, fac=1.001):
+        """return the logarithmic derivative of the linear matter power spectrum
+        """
+        Q2 = np.log(self.cosmology.power_spectrumz(k*fac, self.survey.z))
+        Q1 = np.log(self.cosmology.power_spectrumz(k, self.survey.z))
+        return (Q2-Q1)/(np.log(k*fac)-np.log(k))
 
 class Survey:
     """ large-scale structure survey class with fixed z but kmin/kmax and V specified
     """
     
-    def __init__(self, z=0.57, kmax=0.17, b1fid=1.95, b2fid=0.5, fNLfid=0., Lsurvey=1500., ngbar=0.2248, Lboxes=[100., 200., 300., 400.]):
+    def __init__(self, z=0.57, kmax=0.17, Lsurvey=1500., ngbar=0.2248, Lboxes=[100., 200., 300., 400., 500.]):
+        """
+        The Lbox here is the diameter of a cubic volume
+        """
         self.z=z
-        self.kmax=kmax+0.00001
-        self.b1fid=b1fid
-        self.b2fid=b2fid
+        self.kmax=kmax
         self.ngbar=ngbar
         self.Pshot = 1./self.ngbar
-        
-        self.fNLfid=fNLfid
         self.Lsurvey=Lsurvey
         self.kmin = 2.*np.pi/self.Lsurvey
         self.Lboxes=Lboxes
