@@ -4,7 +4,7 @@ from ..functions import top_hat
 from scipy.integrate import quad, nquad
 import numpy as np
 
-QLIMIT=200
+QLIMIT=200  # limit on the integration cycles
 
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
@@ -16,7 +16,7 @@ class ibkLFisher(Fisher):
         """
         self.survey=survey
         self.cosmology=cosmology
-
+        self.survey.Pshot = 1./self.survey.ngbar
         for pn in range(len(params)):
             if params[pn]=="fNL":
                 self.fNLfid=param_values[pn]
@@ -35,17 +35,16 @@ class ibkLFisher(Fisher):
     
     def DeltaibSq(self, k=0.5, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
-        Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
+        Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
+        Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
         kmin = 2.*np.pi/Lbox
-        #kmax = self.survey.kmax
         b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
-        #NkL = np.power(k/kmin, 2.0)  # check this
-        NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
+        NkL = 2.*np.pi*np.power(k/kmin, 2.0)  # check this
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        term1 = np.power(sigma, 2.0) + self.survey.Pshot/np.power(Lbox, 3.0)
-        term2 = cpower + self.survey.Pshot
+        term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
+        term2 = cpower + self.survey.Pshot*Kp
         
         return Vfactor * term1 * np.power(term2, 2.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 2.0)
         
@@ -128,7 +127,7 @@ class ibkLFisher(Fisher):
                 total=0.0
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
-                    klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+                    klist = np.arange(kmin*2, self.survey.kmax, skip*kmin)
                     dibk_list = np.array([self.ibk_deriv(k, param=self.parameters[i], box=box)*self.ibk_deriv(k, param=self.parameters[j], box=box)/self.DeltaibSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
@@ -147,10 +146,12 @@ class ibkLFisher(Fisher):
     def conv_power_spectrumz(self, k, L=600.):
         """return the convoled power at (k, self.survey.z) for a cubic box of side L
         """
-        fac = 2.*np.pi/(np.power(2.*np.pi*L, 3.0))
+        Volume=4.*np.pi*np.power(L/2.0, 3.0)/3.
+        fac = Volume/(4.*np.pi*np.pi)
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
-        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], limit=QLIMIT)
+        options={'limit':QLIMIT}
+        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
@@ -159,37 +160,42 @@ class itkLFisher(ibkLFisher):
     
     def DeltaitSq(self, k=0.5, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
-        Vfactor = np.power(Lbox/self.survey.Lsurvey, 3.0)
+        Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
+        Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
         kmin = 2.*np.pi/Lbox
         b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
-        NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
+        #NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
+        NkL = 2.*np.pi*np.power(k/kmin, 2.0)
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
         cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        term1 = np.power(sigma, 2.0) + self.survey.Pshot/np.power(Lbox, 3.0)
-        term2 = cpower + self.survey.Pshot
+        term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
+        term2 = cpower + Kp*self.survey.Pshot
         
         return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
    
     def itgNL(self, k, b1, gNL, box=0):
-        return 2.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
+        return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
         
     def itSPT(self, k, b1):
         return (54./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
+        
+    def itL2(self, k, b1, b2, box=0):
+        return (244./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]))
         
     def itL3(self, k, b1, b2, box=0):
         return 6.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
         
     def itL4(self, k, b1, b3, box=0):
-        return 3.*(b3/b1**3.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
+        return 3.*(b3/b1**3.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/3.)
         
     def ittotal(self, k, b1, b2, b3, gNL, box=0):
         """return the total integrated trispectrum in the squeezed limit, and
         when the rest of the three modes form a equilateral triangle with
         wave number amplitude k
         """
-        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)+ self.itL4(k, b1, b3, box) +self.itL3(k, b1, b2, box)+(10.*b2/b1**3.0)
+        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)+ self.itL4(k, b1, b3, box) +self.itL3(k, b1, b2, box)+self.itL2(k, b1, b2, box)
         
     def itk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
@@ -222,7 +228,7 @@ class itkLFisher(ibkLFisher):
                 total=0.0
                 for box in range(len(self.survey.Lboxes)):
                     kmin = 2.*np.pi/self.survey.Lboxes[box]
-                    klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+                    klist = np.arange(kmin*2, self.survey.kmax, skip*kmin)
                     dibk_list = np.array([self.itk_deriv(k, param=self.params[i], box=box)*self.itk_deriv(k, param=self.params[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
                     total = total + np.sum(dibk_list)
                 fmatrix[i][j]=total
