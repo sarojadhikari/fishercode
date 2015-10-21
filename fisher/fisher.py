@@ -7,9 +7,14 @@
 """
 
 import numpy as np
-#from ..functions import *
 from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
+
+import matplotlib
+matplotlib.rcParams.update({'font.size': 13})
+matplotlib.rcParams.update({'figure.autolayout': True})
+matplotlib.rcParams.update({'ytick.major.pad': 8})
+matplotlib.rcParams.update({'xtick.major.pad': 6})
 
 class Fisher(object): 
     """
@@ -121,7 +126,7 @@ class Fisher(object):
         sigma_ij=self.covariance_matrix.item(i,j)
         return sigma_ij/self.sigma_i(i)/self.sigma_i(j)
      
-    def error_ellipse(self, i, j, nstd=1, space_factor=5., clr='b', alpha=0.5):
+    def error_ellipse(self, i, j, nstd=1, space_factor=5., clr='b', alpha=0.5, lw=1.5):
         """
         return the plot of the error ellipse from the covariance matrix
         use ideas from error_ellipse.m from 
@@ -139,10 +144,12 @@ class Fisher(object):
         self.marginalize(param_list=[i,j])
         vals, vecs = eigsorted(self.marginal_covariance_matrix)
         theta = np.degrees(np.arctan2(*vecs[:,0][::-1]))
-        print theta
+        #print theta
         width, height = 2* nstd * np.sqrt(vals)
         xypos=[self.parameter_values[i], self.parameter_values[j]]
         ellip = Ellipse(xy=xypos, width=width, height=height, angle=theta, color=clr, alpha=alpha)
+        ellip.set_facecolor("white")
+        ellip.set_linewidth(lw)
         ellip_vertices=ellip.get_verts()
         xl=[ellip_vertices[k][0] for k in range(len(ellip_vertices))]
         yl=[ellip_vertices[k][1] for k in range(len(ellip_vertices))]
@@ -151,12 +158,11 @@ class Fisher(object):
         xyaxes=[min(xl)-dx, max(xl)+dx, min(yl)-dy, max(yl)+dy]
         return ellip, xyaxes
             
-    def plot_error_ellipse(self, i, j, xyaxes_input=0, nstd=1, clr='b', alpha=0.5):
+    def plot_error_ellipse(self, i, j, xyaxes_input=0, nstd=1, clr='b', alpha=0.5, lw=1.5):
         """
         """
-        import matplotlib.pyplot as plt
         ax = plt.gca()
-        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr=clr, alpha=alpha)
+        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr=clr, alpha=alpha, lw=lw)
         ax.add_artist(errorellipse)
         if (xyaxes_input!=0):
             ax.axis(xyaxes_input)
@@ -165,7 +171,7 @@ class Fisher(object):
             
         plt.xlabel(self.param_names[i])
         plt.ylabel(self.param_names[j])
-        plt.show()
+        #plt.show()
         return plt
         
     def plot_error_matrix(self, params, nstd=2):
@@ -174,7 +180,8 @@ class Fisher(object):
         """
         fac = len(params)-1
         #plt.figure(num=None, figsize=(fac*xs, fac*ys))
-        
+        plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
+
         f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
         for i in range(fac):
             for j in range(fac):
@@ -186,17 +193,18 @@ class Fisher(object):
             allaxes.add_artist(errorellipse)
             allaxes.axis(xyaxes)
             allaxes.set_xlabel(self.param_names[0])
-            allaxes.set_ylabel(self.param_names[1])
-            
+            allaxes.set_ylabel(self.param_names[1]) 
         else:
             for j in params:
                 for i in params:
                     if (j>i):
-                        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=2, clr="b", alpha=0.5)
+                        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr="b", alpha=0.5)
                         jp=i
                         ip=j-1
+                        allaxes[ip][jp].ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
                         allaxes[ip][jp].add_artist(errorellipse)
                         allaxes[ip][jp].axis(xyaxes)
                         allaxes[ip][jp].set_xlabel(self.param_names[i])
                         allaxes[ip][jp].set_ylabel(self.param_names[j])
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
+                        
