@@ -167,7 +167,6 @@ class ClusterFisher(Fisher):
         ls=int((self.survey.zmax-self.survey.zmin)/self.survey.dz)
         ms=int((15-np.log10(self.survey.Mth))/(np.log10(1+self.survey.dlogM*2.3)))
         for l in range(ls):
-            print l
             for m in range(ms):
                 Nbar=self.Nlm(l, m)
                 output=mp.Queue()

@@ -1,2 +1,2 @@
-import functions, fisher, bispectrum, cluster, cmb
+import fisher, bispectrum, functions
 from cosmology import cosmo

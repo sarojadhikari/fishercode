@@ -1,6 +1,6 @@
 
-from ..fisher import Fisher
-from ..functions import top_hat
+from fisher import Fisher
+from functions import top_hat
 from scipy.integrate import quad, nquad
 import numpy as np
 
@@ -42,7 +42,8 @@ class ibkLFisher(Fisher):
         Kp = self.Kaiser_factor_p(b1)
         NkL = 2.*np.pi*np.power(k/kmin, 2.0)  # check this
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
-        cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
+        #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/50. # fifty is ad-hoc test correction for the conv-power spectrum
+        cpower = Kp*b1*b1*self.conv_power_spectrumz(k, L=Lbox)
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + self.survey.Pshot*Kp
         
@@ -151,7 +152,7 @@ class ibkLFisher(Fisher):
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
-        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], opts=[options, options])
+        results = nquad(integrand, [[kmin, self.survey.kmax*10.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
@@ -169,7 +170,8 @@ class itkLFisher(ibkLFisher):
         NkL = 2.*np.pi*np.power(k/kmin, 2.0)
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
+        #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/60. # 60 is ad-hoc at the moment
+        cpower = Kp*b1*b1*self.conv_power_spectrumz(k, L=Lbox)
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + Kp*self.survey.Pshot
         
