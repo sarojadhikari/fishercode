@@ -4,7 +4,9 @@ from functions import top_hat
 from scipy.integrate import quad, nquad
 import numpy as np
 
-QLIMIT=200  # limit on the integration cycles
+from mpi4py import MPI
+
+QLIMIT=190  # limit on the integration cycles
 
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
@@ -33,7 +35,7 @@ class ibkLFisher(Fisher):
         self.sigmaSqsWL = np.array([self.sigmaWLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
         
     
-    def DeltaibSq(self, k=0.5, box=0):
+    def DeltaibSq(self, k=0.5, cp=1.0, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
         Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
         Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
@@ -43,7 +45,7 @@ class ibkLFisher(Fisher):
         NkL = 2.*np.pi*np.power(k/kmin, 2.0)  # check this
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/50. # fifty is ad-hoc test correction for the conv-power spectrum
-        cpower = Kp*b1*b1*self.conv_power_spectrumz(k, L=Lbox)
+        cpower = Kp*b1*b1*cp
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + self.survey.Pshot*Kp
         
@@ -123,15 +125,19 @@ class ibkLFisher(Fisher):
         """
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
-        for i in range(self.nparams):
-            for j in range(self.nparams):
-                total=0.0
-                for box in range(len(self.survey.Lboxes)):
-                    kmin = 2.*np.pi/self.survey.Lboxes[box]
-                    klist = np.arange(kmin*2, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.ibk_deriv(k, param=self.parameters[i], box=box)*self.ibk_deriv(k, param=self.parameters[j], box=box)/self.DeltaibSq(k, box=box) for k in klist])
-                    total = total + np.sum(dibk_list)
-                fmatrix[i][j]=total
+        for box in range(len(self.survey.Lboxes)):
+            print ("box number: ", box, "/", len(self.survey.Lboxes))
+            kmin = 2.*np.pi/self.survey.Lboxes[box]
+            klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+            plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
+            print (klist, plist)
+            if plist!=None:
+                for i in range(self.nparams):
+                    for j in range(self.nparams):
+                        total=0.0
+                        dibk_list = np.array([self.ibk_deriv(klist[ki], param=self.parameters[i], box=box)*self.ibk_deriv(klist[ki], param=self.parameters[j], box=box)/self.DeltaibSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
+                        total = total + np.sum(dibk_list)
+                        fmatrix[i][j]=total
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
@@ -143,7 +149,44 @@ class ibkLFisher(Fisher):
         Q1 = np.log(np.power(k, 3.0)*self.cosmology.power_spectrumz(k, self.survey.z))
         return (Q2-Q1)/(np.log(k*fac)-np.log(k))
     #def ibkL_integrand(self, z, b1, b2, 
+    
+    def mpi_conv_power(self, klist, L=600.):
+        listall=[]
+        comm = MPI.COMM_WORLD
+        Ncores = comm.Get_size()
+        rank = comm.Get_rank()
         
+        Nk = len(klist)
+        bdown = int(Nk/Ncores)
+        print (Ncores, Nk, bdown)
+
+        for i in range(0, bdown):
+            # first scatter klist
+            if rank == 0:
+                kdata = klist[i*Ncores:(i+1)*Ncores]
+            else:
+                kdata = None
+                
+            kdata = comm.scatter(kdata, root=0)            
+            kdata = self.conv_power_spectrumz(kdata, L)
+            
+            kdata = comm.gather(kdata, root=0)
+            
+            if (kdata != None and rank==0):
+                listall = np.append(listall, kdata)
+            
+            comm.Barrier()
+
+        # do anything that is left
+        if (bdown*Ncores < Nk):
+            kdata = klist[bdown*Ncores:Nk]
+            kdata = self.conv_power_spectrumz(kdata, L)
+            listall = np.append(listall, kdata)
+            comm.Barrier()
+            
+        print (listall)    
+        return listall.flatten()
+    
     def conv_power_spectrumz(self, k, L=600.):
         """return the convoled power at (k, self.survey.z) for a cubic box of side L
         """
@@ -152,7 +195,7 @@ class ibkLFisher(Fisher):
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
-        results = nquad(integrand, [[kmin, self.survey.kmax*10.], [-1.,1.]], opts=[options, options])
+        results = nquad(integrand, [[kmin, self.survey.kmax*3.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
