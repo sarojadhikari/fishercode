@@ -102,7 +102,7 @@ class Fisher(object):
         for param in self.parameters:
             hd=hd+param+" "
             
-        np.savetext(fname, self.fisher_matrix, header=hd)
+        np.savetxt(fname, self.fisher_matrix, header=hd)
         return 0
     
     def load_fisher_matrix(self, fname):
