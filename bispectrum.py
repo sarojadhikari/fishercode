@@ -6,7 +6,7 @@ import numpy as np
 
 from mpi4py import MPI
 
-QLIMIT=190  # limit on the integration cycles
+QLIMIT=200  # limit on the integration cycles
 
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
@@ -129,15 +129,16 @@ class ibkLFisher(Fisher):
             print ("box number: ", box, "/", len(self.survey.Lboxes))
             kmin = 2.*np.pi/self.survey.Lboxes[box]
             klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-            plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
-            print (klist, plist)
-            if plist!=None:
-                for i in range(self.nparams):
-                    for j in range(self.nparams):
-                        total=0.0
-                        dibk_list = np.array([self.ibk_deriv(klist[ki], param=self.parameters[i], box=box)*self.ibk_deriv(klist[ki], param=self.parameters[j], box=box)/self.DeltaibSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
-                        total = total + np.sum(dibk_list)
-                        fmatrix[i][j]=total
+            #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
+            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            #plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
+
+            for i in range(self.nparams):
+                for j in range(self.nparams):
+                    total=0.0
+                    dibk_list = np.array([self.ibk_deriv(klist[ki], param=self.parameters[i], box=box)*self.ibk_deriv(klist[ki], param=self.parameters[j], box=box)/self.DeltaibSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
+                    total = total + np.sum(dibk_list)
+                    fmatrix[i][j]=fmatrix[i][j]+total
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
@@ -152,6 +153,7 @@ class ibkLFisher(Fisher):
     
     def mpi_conv_power(self, klist, L=600.):
         listall=[]
+        #MPI.Init()
         comm = MPI.COMM_WORLD
         Ncores = comm.Get_size()
         rank = comm.Get_rank()
@@ -169,21 +171,21 @@ class ibkLFisher(Fisher):
                 
             kdata = comm.scatter(kdata, root=0)            
             kdata = self.conv_power_spectrumz(kdata, L)
+            comm.Barrier()
             
             kdata = comm.gather(kdata, root=0)
             
-            if (kdata != None and rank==0):
+            if (kdata != None):
                 listall = np.append(listall, kdata)
             
             comm.Barrier()
-
         # do anything that is left
         if (bdown*Ncores < Nk):
             kdata = klist[bdown*Ncores:Nk]
             kdata = self.conv_power_spectrumz(kdata, L)
             listall = np.append(listall, kdata)
             comm.Barrier()
-            
+        
         print (listall)    
         return listall.flatten()
     
@@ -195,7 +197,7 @@ class ibkLFisher(Fisher):
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
-        results = nquad(integrand, [[kmin, self.survey.kmax*3.], [-1.,1.]], opts=[options, options])
+        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
