@@ -110,7 +110,7 @@ class Fisher(object):
         load the fisher matrix in file fname. currently, one has to set the parameter names etc
         manually.
         """
-        self.fisher_matrix=np.loadtxt(fname)
+        self.fisher_matrix=np.matrix(np.loadtxt(fname))
         return 0
         
     def sigma_i(self, i):
