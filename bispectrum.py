@@ -130,8 +130,8 @@ class ibkLFisher(Fisher):
             kmin = 2.*np.pi/self.survey.Lboxes[box]
             klist = np.arange(kmin, self.survey.kmax, skip*kmin)
             #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
-            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
-            #plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
+            #plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
 
             for i in range(self.nparams):
                 for j in range(self.nparams):
@@ -204,7 +204,7 @@ class itkLFisher(ibkLFisher):
     """ similar to ibkLFisher but for the squeezed trispectrum
     """
     
-    def DeltaitSq(self, k=0.5, box=0):
+    def DeltaitSq(self, k=0.5, cp=1.0, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
         Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
         Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
@@ -216,7 +216,7 @@ class itkLFisher(ibkLFisher):
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
         #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/60. # 60 is ad-hoc at the moment
-        cpower = Kp*b1*b1*self.conv_power_spectrumz(k, L=Lbox)
+        cpower = Kp*b1*b1*cp
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + Kp*self.survey.Pshot
         
@@ -270,15 +270,20 @@ class itkLFisher(ibkLFisher):
         """
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
-        for i in range(self.nparams):
-            for j in range(self.nparams):
-                total=0.0
-                for box in range(len(self.survey.Lboxes)):
-                    kmin = 2.*np.pi/self.survey.Lboxes[box]
-                    klist = np.arange(kmin*2, self.survey.kmax, skip*kmin)
-                    dibk_list = np.array([self.itk_deriv(k, param=self.params[i], box=box)*self.itk_deriv(k, param=self.params[j], box=box)/self.DeltaitSq(k, box=box) for k in klist])
-                    total = total + np.sum(dibk_list)
-                fmatrix[i][j]=total
+        for box in range(len(self.survey.Lboxes)):
+            print ("box number: ", box, "/", len(self.survey.Lboxes))
+            kmin = 2.*np.pi/self.survey.Lboxes[box]
+            klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+            #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
+            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            
+            for i in range(self.nparams):
+                for j in range(self.nparams):
+                    total=0.0
+                    for box in range(len(self.survey.Lboxes)):
+                        dibk_list = np.array([self.itk_deriv(klist[ki], param=self.params[i], box=box)*self.itk_deriv(klist[ki], param=self.params[j], box=box)/self.DeltaitSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
+                        total = total + np.sum(dibk_list)
+                        fmatrix[i][j]=fmatrix[i][j]+total
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
