@@ -11,7 +11,8 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 
 import matplotlib
-matplotlib.rcParams.update({'font.size': 13})
+matplotlib.rcParams.update({'text.usetex': True})
+matplotlib.rcParams.update({'font.size': 12})
 matplotlib.rcParams.update({'figure.autolayout': True})
 matplotlib.rcParams.update({'ytick.major.pad': 8})
 matplotlib.rcParams.update({'xtick.major.pad': 6})
@@ -148,7 +149,7 @@ class Fisher(object):
         width, height = 2* nstd * np.sqrt(vals)
         xypos=[self.parameter_values[i], self.parameter_values[j]]
         ellip = Ellipse(xy=xypos, width=width, height=height, angle=theta, color=clr, alpha=alpha)
-        ellip.set_facecolor("white")
+        #ellip.set_facecolor("white")
         ellip.set_linewidth(lw)
         ellip_vertices=ellip.get_verts()
         xl=[ellip_vertices[k][0] for k in range(len(ellip_vertices))]
@@ -169,19 +170,20 @@ class Fisher(object):
         else:
             ax.axis(xyaxes)
             
-        plt.xlabel(self.param_names[i])
-        plt.ylabel(self.param_names[j])
+        plt.xlabel(self.param_names[i], fontsize=16)
+        plt.ylabel(self.param_names[j], fontsize=16)
         #plt.show()
         return plt
         
-    def plot_error_matrix(self, params, nstd=2):
+    def plot_error_matrix(self, params, nstd=2, nbinsx=4, nbinsy=7):
         """ plot a matrix of fisher forecast error ellipses given the
         list of parameters provided
         """
         fac = len(params)-1
         #plt.figure(num=None, figsize=(fac*xs, fac*ys))
+        plt.close('all')
         plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
-
+        
         f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
         for i in range(fac):
             for j in range(fac):
@@ -189,22 +191,29 @@ class Fisher(object):
                     allaxes[i][j].axis('off')
                     
         if fac<2:
-            errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.5)
+            errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.4)
+            ere2, xyaxes2 = self.error_ellipse(params[0], params[1], nstd=2, clr="r", alpha=0.1)
+            allaxes.add_artist(ere2)
             allaxes.add_artist(errorellipse)
             allaxes.axis(xyaxes)
-            allaxes.set_xlabel(self.param_names[0])
-            allaxes.set_ylabel(self.param_names[1]) 
+            allaxes.set_xlabel(self.param_names[0], fontsize=14)
+            allaxes.set_ylabel(self.param_names[1], fontsize=14) 
         else:
             for j in params:
                 for i in params:
                     if (j>i):
-                        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr="b", alpha=0.5)
+                        errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr="cornflowerblue", alpha=0.75)
+                        ere2, xyaxes2 = self.error_ellipse(params[i], params[j], nstd=2*nstd, clr="cornflowerblue", alpha=0.35)
                         jp=i
                         ip=j-1
-                        allaxes[ip][jp].ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
-                        allaxes[ip][jp].add_artist(errorellipse)
-                        allaxes[ip][jp].axis(xyaxes)
-                        allaxes[ip][jp].set_xlabel(self.param_names[i])
-                        allaxes[ip][jp].set_ylabel(self.param_names[j])
+                        axis=allaxes[ip][jp]
+                        axis.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
+                        axis.locator_params(axis='x', nbins=nbinsx)
+                        axis.locator_params(axis='y', nbins=nbinsy)
+                        axis.add_artist(ere2)
+                        axis.add_artist(errorellipse)
+                        axis.axis(xyaxes2)
+                        axis.set_xlabel(self.param_names[i], fontsize=14)
+                        axis.set_ylabel(self.param_names[j], fontsize=14)
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
                         
