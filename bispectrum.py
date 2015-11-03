@@ -19,6 +19,11 @@ class ibkLFisher(Fisher):
         self.survey=survey
         self.cosmology=cosmology
         self.survey.Pshot = 1./self.survey.ngbar
+        self.fNLfid=0.0
+        self.b1fid=0.0
+        self.b2fid=0.0
+        self.b3fid=0.0
+        
         for pn in range(len(params)):
             if params[pn]=="fNL":
                 self.fNLfid=param_values[pn]
@@ -74,7 +79,7 @@ class ibkLFisher(Fisher):
         return results[0]/(2.*np.pi**2.0)
     
     def ibSPT(self, k, b1):
-        return (68./21 - (1./3)*self.dlnk3Pkdlnk(k))/b1
+        return (47./21 - (1./3)*self.dlnPkdlnk(k))/b1
     
     def ibb2(self, k, b1, b2):
         return 2.*b2/np.power(b1, 2.0)
@@ -143,11 +148,11 @@ class ibkLFisher(Fisher):
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
         
-    def dlnk3Pkdlnk(self, k, fac=1.01):
+    def dlnPkdlnk(self, k, fac=1.001):
         """return the logarithmic derivative of the linear matter power spectrum
         """
-        Q2 = np.log(np.power(k*fac, 3.0)*self.cosmology.power_spectrumz(k*fac, self.survey.z))
-        Q1 = np.log(np.power(k, 3.0)*self.cosmology.power_spectrumz(k, self.survey.z))
+        Q2 = np.log(self.cosmology.power_spectrumz(k*fac, self.survey.z))
+        Q1 = np.log(self.cosmology.power_spectrumz(k, self.survey.z))
         return (Q2-Q1)/(np.log(k*fac)-np.log(k))
     #def ibkL_integrand(self, z, b1, b2, 
     
@@ -225,8 +230,8 @@ class itkLFisher(ibkLFisher):
     def itgNL(self, k, b1, gNL, box=0):
         return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
         
-    def itSPT(self, k, b1):
-        return (54./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
+    def itSPT(self, k, b1, box=0):
+        return (54./7.)*((73./21)-2*self.dlnPkdlnk(k))*(4.*81.*self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/7.)/np.power(b1, 2.0)
         
     def itL2(self, k, b1, b2, box=0):
         return (244./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]))
@@ -242,7 +247,7 @@ class itkLFisher(ibkLFisher):
         when the rest of the three modes form a equilateral triangle with
         wave number amplitude k
         """
-        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1)+ self.itL4(k, b1, b3, box) +self.itL3(k, b1, b2, box)+self.itL2(k, b1, b2, box)
+        return self.itgNL(k, b1, gNL, box=box) + self.itSPT(k, b1, box)+ self.itL4(k, b1, b3, box) +self.itL3(k, b1, b2, box)+self.itL2(k, b1, b2, box)
         
     def itk_deriv(self, k, param="fNL", box=0):
         """ find the derivatives around the fiducial values defined in the survey class
@@ -288,13 +293,7 @@ class itkLFisher(ibkLFisher):
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
-        
-    def dlnPkdlnk(self, k, fac=1.001):
-        """return the logarithmic derivative of the linear matter power spectrum
-        """
-        Q2 = np.log(self.cosmology.power_spectrumz(k*fac, self.survey.z))
-        Q1 = np.log(self.cosmology.power_spectrumz(k, self.survey.z))
-        return (Q2-Q1)/(np.log(k*fac)-np.log(k))
+    
 
 class Survey:
     """ large-scale structure survey class with fixed z but kmin/kmax and V specified
