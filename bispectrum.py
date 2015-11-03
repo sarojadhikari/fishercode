@@ -130,15 +130,15 @@ class ibkLFisher(Fisher):
             kmin = 2.*np.pi/self.survey.Lboxes[box]
             klist = np.arange(kmin, self.survey.kmax, skip*kmin)
             #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
-            #plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
-            plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
+            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            #plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
 
             for i in range(self.nparams):
                 for j in range(self.nparams):
-                    total=0.0
+                    #total=0.0
                     dibk_list = np.array([self.ibk_deriv(klist[ki], param=self.parameters[i], box=box)*self.ibk_deriv(klist[ki], param=self.parameters[j], box=box)/self.DeltaibSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
-                    total = total + np.sum(dibk_list)
-                    fmatrix[i][j]=fmatrix[i][j]+total
+                    #total = total + np.sum(dibk_list)
+                    fmatrix[i][j]=fmatrix[i][j]+np.sum(dibk_list)
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
@@ -279,11 +279,12 @@ class itkLFisher(ibkLFisher):
             
             for i in range(self.nparams):
                 for j in range(self.nparams):
-                    total=0.0
+                    #total=0.0
                     for box in range(len(self.survey.Lboxes)):
                         dibk_list = np.array([self.itk_deriv(klist[ki], param=self.params[i], box=box)*self.itk_deriv(klist[ki], param=self.params[j], box=box)/self.DeltaitSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
-                        total = total + np.sum(dibk_list)
-                        fmatrix[i][j]=fmatrix[i][j]+total
+                        
+                        #total = total + np.sum(dibk_list)
+                        fmatrix[i][j]=fmatrix[i][j]+np.sum(dibk_list)
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
