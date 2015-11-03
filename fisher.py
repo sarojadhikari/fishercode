@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib
 matplotlib.rcParams.update({'text.usetex': True})
+matplotlib.rcParams.update({'axes.formatter.useoffset': False})
 matplotlib.rcParams.update({'font.size': 12})
 matplotlib.rcParams.update({'figure.autolayout': True})
 matplotlib.rcParams.update({'ytick.major.pad': 8})
@@ -175,7 +176,7 @@ class Fisher(object):
         #plt.show()
         return plt
         
-    def plot_error_matrix(self, params, nstd=2, nbinsx=4, nbinsy=7):
+    def plot_error_matrix(self, params, nstd=2, nbinsx=4, nbinsy=6):
         """ plot a matrix of fisher forecast error ellipses given the
         list of parameters provided
         """
