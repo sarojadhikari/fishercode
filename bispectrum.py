@@ -233,10 +233,10 @@ class itkLFisher(ibkLFisher):
     def itSPT(self, k, b1, box=0):
         #return ((54./7.)*((73./21)-2*self.dlnPkdlnk(k))+(4.*81.*self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/7.))/np.power(b1, 2.0)
         #return (12./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
-        return (12./7.)*(73./21)/np.power(b1, 2.0)
+        return (12./7.)*(73./21-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         
     def itL2(self, k, b1, b2, box=0):
-        return (244./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]))
+        return (122./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])-2.*self.dlnPkdlnk(k))
         
     def itL3(self, k, b1, b2, box=0):
         return 6.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
