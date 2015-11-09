@@ -4,6 +4,8 @@ from functions import top_hat
 from scipy.integrate import quad, nquad
 import numpy as np
 
+from os.path import isfile
+
 from mpi4py import MPI
 
 QLIMIT=200  # limit on the integration cycles
@@ -132,11 +134,10 @@ class ibkLFisher(Fisher):
         
         for box in range(len(self.survey.Lboxes)):
             print ("box number: ", box, "/", len(self.survey.Lboxes))
-            kmin = 2.*np.pi/self.survey.Lboxes[box]
-            klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+            #kmin = 2.*np.pi/self.survey.Lboxes[box]
             #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
-            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
-            #plist = np.array([self.cosmology.power_spectrumz(k, z=self.survey.z) for k in klist])
+            
+            klist, plist = self.cpower_saveload(box, skip=skip)
 
             for i in range(self.nparams):
                 for j in range(self.nparams):
@@ -147,7 +148,18 @@ class ibkLFisher(Fisher):
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
-        
+    
+    def cpower_saveload(self, box, skip=1.):
+        kmin = 2.*np.pi/self.survey.Lboxes[box]
+        klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+        cpfname = "cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
+        if isfile(cpfname):
+            plist = np.load(cpfname)
+        else:
+            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            np.save(cpfname, plist)
+        return klist, plist
+    
     def dlnPkdlnk(self, k, fac=1.001):
         """return the logarithmic derivative of the linear matter power spectrum
         """
@@ -279,10 +291,10 @@ class itkLFisher(ibkLFisher):
         
         for box in range(len(self.survey.Lboxes)):
             print ("box number: ", box, "/", len(self.survey.Lboxes))
-            kmin = 2.*np.pi/self.survey.Lboxes[box]
-            klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-            #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
-            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            #kmin = 2.*np.pi/self.survey.Lboxes[box]
+            #klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+            klist, plist = self.cpower_saveload(box, skip=skip)
+            #plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
             
             for i in range(self.nparams):
                 for j in range(self.nparams):
