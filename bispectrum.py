@@ -248,7 +248,11 @@ class itkLFisher(ibkLFisher):
         return (12./7.)*(73./21-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         
     def itL2(self, k, b1, b2, box=0):
-        return (122./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])-2.*self.dlnPkdlnk(k))
+        logP = self.dlnPkdlnk(k)
+        term1 = 19./7 - 0.5 *logP
+        term2 = self.cosmology.power_spectrumz(k, self.survey.z)*(24./7-logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
+        return 4.*(b2/b1**3.0)*(term1 + term2)
+        #return (122./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])-2.*self.dlnPkdlnk(k))
         
     def itL3(self, k, b1, b2, box=0):
         return 6.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
