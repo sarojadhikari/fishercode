@@ -155,6 +155,9 @@ class ibkLFisher(Fisher):
         cpfname = "cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
         if isfile(cpfname):
             plist = np.load(cpfname)
+            if (self.survey.z!=0.57):
+                pratio = self.cosmology.growth_factor(self.survey.z)/self.cosmology.growth_factor(0.57)
+                plist = plist*pratio
         else:
             plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
             np.save(cpfname, plist)
@@ -245,7 +248,7 @@ class itkLFisher(ibkLFisher):
     def itSPT(self, k, b1, box=0):
         #return ((54./7.)*((73./21)-2*self.dlnPkdlnk(k))+(4.*81.*self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/7.))/np.power(b1, 2.0)
         #return (12./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
-        return (12./7.)*(73./21-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
+        return (4./7.)*(73./21-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         
     def itL2(self, k, b1, b2, box=0):
         logP = self.dlnPkdlnk(k)
