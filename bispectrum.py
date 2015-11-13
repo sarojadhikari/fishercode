@@ -152,7 +152,7 @@ class ibkLFisher(Fisher):
     def cpower_saveload(self, box, skip=1.):
         kmin = 2.*np.pi/self.survey.Lboxes[box]
         klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-        cpfname = "cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
+        cpfname = "conv_data/cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
         if isfile(cpfname):
             plist = np.load(cpfname)
             if (self.survey.z!=0.57):
