@@ -133,6 +133,7 @@ class Fisher(object):
         return the plot of the error ellipse from the covariance matrix
         use ideas from error_ellipse.m from 
         http://www.mathworks.com/matlabcentral/fileexchange/4705-error-ellipse
+        ( the version used here was taken from an earlier version, it looks to have been updated there to a new version.)
         
         * (i,j) specify the ith and jth parameters to be used and
         * nstd specifies the number of standard deviations to plot, the default is 1 sigma. 
@@ -176,7 +177,7 @@ class Fisher(object):
         #plt.show()
         return plt
         
-    def plot_error_matrix(self, params, nstd=2, nbinsx=4, nbinsy=6):
+    def plot_error_matrix(self, params, nstd=2, nbinsx=6, nbinsy=6):
         """ plot a matrix of fisher forecast error ellipses given the
         list of parameters provided
         """
