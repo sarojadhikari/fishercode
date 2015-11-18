@@ -177,7 +177,7 @@ class Fisher(object):
         #plt.show()
         return plt
         
-    def plot_error_matrix(self, params, nstd=2, nbinsx=6, nbinsy=6):
+    def plot_error_matrix(self, params, nstd=1, nbinsx=6, nbinsy=6):
         """ plot a matrix of fisher forecast error ellipses given the
         list of parameters provided
         """
