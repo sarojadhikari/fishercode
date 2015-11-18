@@ -133,7 +133,7 @@ class ibkLFisher(Fisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
         for box in range(len(self.survey.Lboxes)):
-            print ("box number: ", box, "/", len(self.survey.Lboxes))
+            #print ("box number: ", box, "/", len(self.survey.Lboxes))
             #kmin = 2.*np.pi/self.survey.Lboxes[box]
             #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
             
