@@ -18,8 +18,8 @@ fidcosmo.set_sigma8(0.79)
 #===============================================#
 zmin = 0.1
 zmax = 3.0
-Nbins = 15
-KMAX = 0.17
+Nbins = 10
+KMAX = 0.2
 zstep = (zmax-zmin)/Nbins
 
 def ng(z):
@@ -28,7 +28,7 @@ def ng(z):
     lin = ng2+(3.0-z)*(ng1-ng2)/(zmax - zmin)
     return np.power(10., lin)
 
-Lbs=[50., 100.]
+Lbs=[200., 300.]
 TotalSV = np.sum([4.*np.pi*np.power(Lbs[i]/2.0, 3.0) for i in range(len(Lbs))])
 cnt = 0
 
@@ -37,7 +37,8 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
     if max(Lbs)<Ls:
         ngb = ng(z)
         survey=bispectrum.Survey(z=z, Lsurvey=Ls, ngbar=ngb, kmax=KMAX, Lboxes=Lbs)
-        bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
+        #bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
+        bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "b3", "fNL"], param_names=["$b_1$", "$b_2$", "$b_3$", r"g_{\rm NL}"], param_values=[1.95, 0.5, 0.0, 0.0])
         bf.fisher()
         
         VolumeRatio = int(3.*np.power(Ls, 3.0)/TotalSV)  
@@ -54,9 +55,10 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
 #np.savetxt("fmbk_SPHEREx_1.95_0.5_0.01_0.17_3.txt", total_fisher)
         
 bf.fisher_matrix=total_fisher
+np.savetxt("fmtk_SPHEREx_1.95_0.5_0.0_0.2_3.txt", total_fisher)
 bf.covariance()
 
-bf.plot_error_matrix([0,1,2])
+bf.plot_error_matrix([0,1,2,3])
 plt.show()
 
 sys.exit()
