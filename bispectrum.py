@@ -153,13 +153,13 @@ class ibkLFisher(Fisher):
         kmin = 2.*np.pi/self.survey.Lboxes[box]
         klist = np.arange(kmin, self.survey.kmax, skip*kmin)
         cpfname = "conv_data/cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
+        gfratio = self.cosmology.growth_factor(self.survey.z)/self.cosmology.growth_factor(0.0)
         if isfile(cpfname):
             plist = np.load(cpfname)
-            if (self.survey.z!=0.57):
-                pratio = self.cosmology.growth_factor(self.survey.z)/self.cosmology.growth_factor(0.57)
-                plist = plist*pratio
+            if (self.survey.z!=0.0):
+                plist = plist*gfratio
         else:
-            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
+            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box])/gfratio for k in klist])
             np.save(cpfname, plist)
         return klist, plist
     
