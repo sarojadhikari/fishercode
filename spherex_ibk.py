@@ -38,7 +38,7 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
         ngb = ng(z)
         survey=bispectrum.Survey(z=z, Lsurvey=Ls, ngbar=ngb, kmax=KMAX, Lboxes=Lbs)
         #bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
-        bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "b3", "fNL"], param_names=["$b_1$", "$b_2$", "$b_3$", r"g_{\rm NL}"], param_values=[1.95, 0.5, 0.0, 0.0])
+        bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "b3", "fNL"], param_names=["$b_1$", "$b_2$", "$b_3$", r"$g_{\rm NL$}"], param_values=[1.95, 0.5, 0.0, 0.0])
         bf.fisher()
         
         VolumeRatio = int(3.*np.power(Ls, 3.0)/TotalSV)  
