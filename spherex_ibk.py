@@ -18,7 +18,7 @@ fidcosmo.set_sigma8(0.79)
 #===============================================#
 zmin = 0.1
 zmax = 3.0
-Nbins = 12
+Nbins = 15
 KMAX = 0.2
 zstep = (zmax-zmin)/Nbins
 
@@ -34,19 +34,22 @@ cnt = 0
 for z in np.arange(zmin+zstep/2, zmax, zstep):
     Ls = fidcosmo.volume_factor(z, zstep)**(1./3)
     # select subvolumes according to Ls i.e. if the volume is large enough --- for example for larger z --- it maybe useful to make big subvolumes.
-    if (z<2.0):
+    if (z<1.4):
         Lbs = [200., 300.]
+    elif (z<1.8):
+        Lbs = [200., 1500.]
     else:
-        Lbs = [200., 1000.]
+        Lbs = [200., 2000.]
     
-    if max(Lbs)<Ls:
+    TotalSV = np.sum([4.*np.pi*np.power(Lbs[i]/2.0, 3.0) for i in range(len(Lbs))])
+    VolumeRatio = int(np.power(Ls, 3.0)/TotalSV)  
+    
+    if VolumeRatio>=1.0:
         ngb = ng(z)
         survey=bispectrum.Survey(z=z, Lsurvey=Ls, ngbar=ngb, kmax=KMAX, Lboxes=Lbs)
         #bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
         bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "b3", "fNL"], param_names=["$b_1$", "$b_2$", "$b_3$", r"$g_{\rm NL}$"], param_values=[1.95, 0.5, 0.0, 0.0])
         bf.fisher()
-        TotalSV = np.sum([4.*np.pi*np.power(Lbs[i]/2.0, 3.0) for i in range(len(Lbs))])        
-        VolumeRatio = int(3.*np.power(Ls, 3.0)/TotalSV)  
         
         if (cnt==0):
             total_fisher = bf.fisher_matrix * VolumeRatio
@@ -56,6 +59,8 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
             cnt=cnt+1
         
         print (cnt)
+    else:
+        print("sub-volumes larger than the redshift bin volume")
             
 #np.savetxt("fmbk_SPHEREx_1.95_0.5_0.01_0.17_3.txt", total_fisher)
         
