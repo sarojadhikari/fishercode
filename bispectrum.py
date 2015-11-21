@@ -8,7 +8,7 @@ from os.path import isfile
 
 from mpi4py import MPI
 
-QLIMIT=200  # limit on the integration cycles
+QLIMIT=1000  # limit on the integration cycles
 
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
@@ -217,7 +217,7 @@ class ibkLFisher(Fisher):
         kmin = 2.*np.pi/L
         integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
-        results = nquad(integrand, [[kmin, self.survey.kmax*5.], [-1.,1.]], opts=[options, options])
+        results = nquad(integrand, [[kmin/10., self.survey.kmax*10.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
 
 class itkLFisher(ibkLFisher):
