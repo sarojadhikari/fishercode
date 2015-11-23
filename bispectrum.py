@@ -9,6 +9,8 @@ from os.path import isfile
 from mpi4py import MPI
 
 QLIMIT=1000  # limit on the integration cycles
+GKMIN=0.0001
+GKMAX=1.0
 
 class ibkLFisher(Fisher):
     """ implements methods to compute squeezed limit approximation of the reduced
@@ -40,6 +42,7 @@ class ibkLFisher(Fisher):
         self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])  # compute all the sigmaLsq values at once
         self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
         self.sigmaSqsWL = np.array([self.sigmaWLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
+        self.sigmaPSq = np.array([self.sigmaWLPSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
         
     
     def DeltaibSq(self, k=0.5, cp=1.0, box=0):
@@ -58,16 +61,23 @@ class ibkLFisher(Fisher):
         
         return Vfactor * term1 * np.power(term2, 2.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 2.0)
         
+    def sigmaWLPSq(self, Lbox=600.):
+        """
+        """
+        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0)*self.cosmology.power_spectrumz(k, self.survey.z), 2.0)
+        results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
+        return results[0]/(2.*np.pi**2.0)
+        
     def sigmaWLSq(self, Lbox=600.):
         """the integrand only has the window function and not the power spectrum
         """
         integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)
-        results = quad(integrand, 0., np.infty, limit=QLIMIT)
+        results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
     def sigmadLSqfNL(self, Lbox=600.):
         integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
-        results = quad(integrand, 0., np.infty, limit=QLIMIT)
+        results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
     
     def sigmadLSq(self, Lbox=600.):
@@ -76,7 +86,7 @@ class ibkLFisher(Fisher):
         #lb = self.survey.kmin/2.0
         #ub = self.survey.kmax*2.0
         #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
-        results = quad(integrand, 0., np.infty, limit=QLIMIT)
+        results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         #return results[0]/np.power(2.*np.pi, 3.0)
         return results[0]/(2.*np.pi**2.0)
     
@@ -252,16 +262,20 @@ class itkLFisher(ibkLFisher):
         
     def itL2(self, k, b1, b2, box=0):
         logP = self.dlnPkdlnk(k)
-        term1 = 19./7 - 0.5 *logP
-        term2 = self.cosmology.power_spectrumz(k, self.survey.z)*(24./7-logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
-        return 4.*(b2/b1**3.0)*(term1 + term2)
+        cpower = self.cosmology.power_spectrumz(k, self.survey.z)
+        #term1 = 19./7 - 0.5 *logP
+        #term2 = self.cosmology.power_spectrumz(k, self.survey.z)*(24./7-logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
+        term1 = 7.*(98.-11.*logP)
+        term2 = cpower* (242.-28.*logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
+        term3 = (68.+7.*logP)*self.sigmaPSq[box]/self.sigmaSqs[box]/cpower
+        return (b2/b1**3.0)*(term1 + term2 + term3)/42.
         #return (122./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])-2.*self.dlnPkdlnk(k))
         
     def itL3(self, k, b1, b2, box=0):
-        return 6.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
+        return 12.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
         
     def itL4(self, k, b1, b3, box=0):
-        return 6.*3.*(b3/b1**3.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/3.)
+        return 3.*(b3/b1**3.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/3.)
         
     def ittotal(self, k, b1, b2, b3, gNL, box=0):
         """return the total integrated trispectrum in the squeezed limit, and
