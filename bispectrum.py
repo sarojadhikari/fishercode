@@ -39,10 +39,13 @@ class ibkLFisher(Fisher):
                 self.b3fid=param_values[pn]
         
         Fisher.__init__(self, params, param_values, param_names, priors)
-        self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])  # compute all the sigmaLsq values at once
-        self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
-        self.sigmaSqsWL = np.array([self.sigmaWLSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
-        self.sigmaPSq = np.array([self.sigmaWLPSq(self.survey.Lboxes[i]) for i in range(self.survey.Nsub)])
+        Nsubs = range(self.survey.Nsub)
+        
+        self.sigmaSqs = np.array([self.sigmadLSq(self.survey.Lboxes[i]) for i in Nsubs])  # compute all the sigmaLsq values at once
+        self.sigmaSqsfNL = np.array([self.sigmadLSqfNL(self.survey.Lboxes[i]) for i in Nsubs])
+        self.sigmaSqsWL = np.array([self.sigmaWLSq(self.survey.Lboxes[i]) for i in Nsubs])
+        self.sigmaPSq = np.array([self.sigmaWLPSq(self.survey.Lboxes[i]) for i in Nsubs])
+        self.sigmaWLa = np.array([self.sigmaWLalpha(self.survey.Lboxes[i]) for i in Nsubs])
         
     
     def DeltaibSq(self, k=0.5, cp=1.0, box=0):
@@ -77,6 +80,11 @@ class ibkLFisher(Fisher):
 
     def sigmadLSqfNL(self, Lbox=600.):
         integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
+        results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
+        return results[0]/(2.*np.pi**2.0)
+
+    def sigmaWLalpha(self, Lbox=600.):
+        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.alpha(k, self.survey.z)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
     
@@ -253,9 +261,17 @@ class itkLFisher(ibkLFisher):
         return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
    
     def itgNL(self, k, b1, gNL, box=0):
-        return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
-        
+        term1 = 3*self.sigmaSqsfNL[box]
+        term2 = self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaWLa[box]/np.power(self.cosmology.alpha(k, self.survey.z), 2.0)
+        #print (term1, term2)
+        return (6*gNL/(self.cosmology.alpha(k, self.survey.z)* b1*b1*self.sigmaSqs[box]))*(term1 + term2)
+        #return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
+    
+
     def itSPT(self, k, b1, box=0):
+        return (579./98 - (32./21.)*self.dlnPkdlnk(k))/np.power(b1, 2.0)
+    
+    def itSPTcon(self, k, b1, box=0):
         #return ((54./7.)*((73./21)-2*self.dlnPkdlnk(k))+(4.*81.*self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/7.))/np.power(b1, 2.0)
         #return (12./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         return (4./7.)*(73./7.-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
