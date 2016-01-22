@@ -90,12 +90,7 @@ class ibkLFisher(Fisher):
     
     def sigmadLSq(self, Lbox=600.):
         integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
-        #integrand = lambda kx, ky, kz: np.power(np.sinc(kx*Lbox/2.0)*np.sinc(ky*Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(np.sqrt(kx**2.0+ky**2.0+kz**2.0), self.survey.z)
-        #lb = self.survey.kmin/2.0
-        #ub = self.survey.kmax*2.0
-        #results = nquad(integrand, [[lb, ub], [lb, ub], [lb, ub]])
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
-        #return results[0]/np.power(2.*np.pi, 3.0)
         return results[0]/(2.*np.pi**2.0)
     
     def ibSPT(self, k, b1):
@@ -151,9 +146,6 @@ class ibkLFisher(Fisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
         
         for box in range(len(self.survey.Lboxes)):
-            #print ("box number: ", box, "/", len(self.survey.Lboxes))
-            #kmin = 2.*np.pi/self.survey.Lboxes[box]
-            #plist = self.mpi_conv_power(klist, L=self.survey.Lboxes[box])
             
             klist, plist = self.cpower_saveload(box, skip=skip)
 
@@ -262,7 +254,8 @@ class itkLFisher(ibkLFisher):
    
     def itgNL(self, k, b1, gNL, box=0):
         term1 = 3*self.sigmaSqsfNL[box]
-        term2 = self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaWLa[box]/np.power(self.cosmology.alpha(k, self.survey.z), 2.0)
+        #term2 = self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaWLa[box]/np.power(self.cosmology.alpha(k, self.survey.z), 2.0)
+        term2=0.
         #print (term1, term2)
         return (6*gNL/(self.cosmology.alpha(k, self.survey.z)* b1*b1*self.sigmaSqs[box]))*(term1 + term2)
         #return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
@@ -272,20 +265,15 @@ class itkLFisher(ibkLFisher):
         return (579./98 - (32./21.)*self.dlnPkdlnk(k))/np.power(b1, 2.0)
     
     def itSPTcon(self, k, b1, box=0):
-        #return ((54./7.)*((73./21)-2*self.dlnPkdlnk(k))+(4.*81.*self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box]/7.))/np.power(b1, 2.0)
-        #return (12./7.)*((73./21)-2*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         return (4./7.)*(73./7.-2.*self.dlnPkdlnk(k))/np.power(b1, 2.0)
         
     def itL2(self, k, b1, b2, box=0):
         logP = self.dlnPkdlnk(k)
         cpower = self.cosmology.power_spectrumz(k, self.survey.z)
-        #term1 = 19./7 - 0.5 *logP
-        #term2 = self.cosmology.power_spectrumz(k, self.survey.z)*(24./7-logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
         term1 = 7.*(98.-11.*logP)
         term2 = cpower* (242.-28.*logP)*self.sigmaSqsWL[box]/self.sigmaSqs[box]
         term3 = (68.+7.*logP)*self.sigmaPSq[box]/self.sigmaSqs[box]/cpower
         return (b2/b1**3.0)*(term1 + term2 + term3)/42.
-        #return (122./7)*(b2/b1**3.0)*(1.+(81./122)*(self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])-2.*self.dlnPkdlnk(k))
         
     def itL3(self, k, b1, b2, box=0):
         return 12.*(b2**2.0/b1**4.0)*(1.+self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaSqsWL[box]/self.sigmaSqs[box])
@@ -328,18 +316,14 @@ class itkLFisher(ibkLFisher):
         
         for box in range(len(self.survey.Lboxes)):
             print ("box number: ", box, "/", len(self.survey.Lboxes))
-            #kmin = 2.*np.pi/self.survey.Lboxes[box]
-            #klist = np.arange(kmin, self.survey.kmax, skip*kmin)
+
             klist, plist = self.cpower_saveload(box, skip=skip)
-            #plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box]) for k in klist])
             
             for i in range(self.nparams):
                 for j in range(self.nparams):
-                    #total=0.0
                     for box in range(len(self.survey.Lboxes)):
                         dibk_list = np.array([self.itk_deriv(klist[ki], param=self.params[i], box=box)*self.itk_deriv(klist[ki], param=self.params[j], box=box)/self.DeltaitSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
                         
-                        #total = total + np.sum(dibk_list)
                         fmatrix[i][j]=fmatrix[i][j]+np.sum(dibk_list)
 
         self.fisher_matrix=np.matrix(fmatrix)
