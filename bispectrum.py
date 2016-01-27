@@ -171,7 +171,7 @@ class ibkLFisher(Fisher):
         else:
             plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box])/gfratio for k in klist])
             np.save(cpfname, plist)
-        return klist[5:], plist[5:]
+        return klist[:], plist[:]
 
     def dlnPkdlnk(self, k, fac=1.001):
         """return the logarithmic derivative of the linear matter power spectrum
@@ -253,13 +253,11 @@ class itkLFisher(ibkLFisher):
         return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
 
     def itgNL(self, k, b1, gNL, box=0):
-        term1 = 3*self.sigmaSqsfNL[box]
-        #term2 = self.cosmology.power_spectrumz(k, self.survey.z)*self.sigmaWLa[box]/np.power(self.cosmology.alpha(k, self.survey.z), 2.0)
-        term2=0.
-        #print (term1, term2)
-        return (6*gNL/(self.cosmology.alpha(k, self.survey.z)* b1*b1*self.sigmaSqs[box]))*(term1 + term2)
-        #return 6.*gNL*self.sigmaSqsfNL[box]/self.sigmaSqs[box]/np.power(b1, 2.0)/self.cosmology.alpha(k, self.survey.z)
-
+        """
+        factor of 18 is for gNLlocal
+        factor of 6 is for gNLT3
+        """
+        return (18.*gNL/(self.cosmology.alpha(k, self.survey.z)* b1*b1*self.sigmaSqs[box]))*self.sigmaSqsfNL[box]
 
     def itSPT(self, k, b1, box=0):
         return (579./98 - (32./21.)*self.dlnPkdlnk(k))/np.power(b1, 2.0)
@@ -315,7 +313,7 @@ class itkLFisher(ibkLFisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
 
         for box in range(len(self.survey.Lboxes)):
-            print ("box number: ", box, "/", len(self.survey.Lboxes))
+            #print ("box number: ", box, "/", len(self.survey.Lboxes))
 
             klist, plist = self.cpower_saveload(box, skip=skip)
 

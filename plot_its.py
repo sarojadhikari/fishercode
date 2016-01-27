@@ -14,13 +14,13 @@ fidcosmo.set_Ob0(0.047)
 fidcosmo.f_baryon=0.17
 fidcosmo.set_sigma8(0.79)
 
-plt.style.use("ggplot")
+#plt.style.use("ggplot")
 
 ######## spherex (1412.4872) - Example ##########
 #===============================================#
 zmin = 0.1
 zmax = 3.0
-Nbins = 10
+Nbins = 30
 KMAX = 0.2
 zstep = (zmax-zmin)/Nbins
 
@@ -48,7 +48,7 @@ itSPT = bf.itSPT(klist, 1.95)
 itL2 = bf.itL2(klist, 1.95, 0.5)
 itL3 = bf.itL3(klist, 1.95, 0.5)
 itL4 = bf.itL4(klist, 1.95, 0.1)
-itgNL = bf.itgNL(klist, 1.95, 50000)
+itgNL = bf.itgNL(klist, 1.95, 100000)
 
 LW=2.0
 
@@ -60,13 +60,11 @@ plt.plot(klist, itL4, ls="dashed", lw=LW, label=r"$it_L^{(4)}$")
 plt.plot(klist, itgNL, "-", lw=LW, label=r"$it_L^{\left(g_{\rm NL}^{\rm local}\right)}$")
 
 
-plt.title(r"$L="+str(Lbs[0])+r"\,{\rm Mpc/h},\, z="+str(z)+r",\, g_{\rm NL}=5\times 10^4 $")
+plt.title(r"$L="+str(Lbs[0])+r"\,{\rm Mpc/h},\, z="+str(z)+r",\, g_{\rm NL}=10^5$")
 plt.ylabel(r"reduced integrated trispectra, $it_L$")
 plt.xlabel(r"$k\, ({\rm Mpc/h})^{-1}$")
 plt.xscale('log')
 
 plt.xlim(kmin, KMAX)
-plt.legend(loc=0, ncol=2)
+plt.legend(loc=0, ncol=2, framealpha=0.4)
 plt.show()
-
-
