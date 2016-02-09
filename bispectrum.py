@@ -50,12 +50,13 @@ class ibkLFisher(Fisher):
 
     def DeltaibSq(self, k=0.5, cp=1.0, box=0):
         Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
-        Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
-        Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
-        kmin = 2.*np.pi/Lbox
+        R = Lbox # can also use R for Lbox (the radius of the spherical subvolume)
+        Vfactor = 4.*np.pi*np.power(R/self.survey.Lsurvey, 3.0)/3.0
+        Volume = 4.*np.pi*np.power(R, 3.0)/3.
+        kmin = np.pi/R
         b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
-        NkL = 2.*np.pi*np.power(k/kmin, 2.0)  # check this
+        NkL = 16.*np.power(np.pi, 5.0)*np.power(k/kmin, 2.0)/3.0  # check this
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
         #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/50. # fifty is ad-hoc test correction for the conv-power spectrum
         cpower = Kp*b1*b1*cp
@@ -64,32 +65,33 @@ class ibkLFisher(Fisher):
 
         return Vfactor * term1 * np.power(term2, 2.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 2.0)
 
-    def sigmaWLPSq(self, Lbox=600.):
+    def sigmaWLPSq(self, Lbox=300.):
         """
         """
-        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0)*self.cosmology.power_spectrumz(k, self.survey.z), 2.0)
+        R=Lbox
+        integrand = lambda k: np.power(k*top_hat(k, R)*self.cosmology.power_spectrumz(k, self.survey.z), 2.0)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
-    def sigmaWLSq(self, Lbox=600.):
+    def sigmaWLSq(self, Lbox=300.):
         """the integrand only has the window function and not the power spectrum
         """
-        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)
+        integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
-    def sigmadLSqfNL(self, Lbox=600.):
-        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
+    def sigmadLSqfNL(self, Lbox=300.):
+        integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)/self.cosmology.alpha(k, self.survey.z)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
-    def sigmaWLalpha(self, Lbox=600.):
-        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.alpha(k, self.survey.z)
+    def sigmaWLalpha(self, Lbox=300.):
+        integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)*self.cosmology.alpha(k, self.survey.z)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
-    def sigmadLSq(self, Lbox=600.):
-        integrand = lambda k: np.power(k*top_hat(k, Lbox/2.0), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
+    def sigmadLSq(self, Lbox=300.):
+        integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
@@ -146,30 +148,28 @@ class ibkLFisher(Fisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
 
         for box in range(len(self.survey.Lboxes)):
-
             klist, plist = self.cpower_saveload(box, skip=skip)
 
             for i in range(self.nparams):
                 for j in range(self.nparams):
-                    #total=0.0
                     dibk_list = np.array([self.ibk_deriv(klist[ki], param=self.parameters[i], box=box)*self.ibk_deriv(klist[ki], param=self.parameters[j], box=box)/self.DeltaibSq(klist[ki], plist[ki], box=box) for ki in range(len(klist))])
-                    #total = total + np.sum(dibk_list)
                     fmatrix[i][j]=fmatrix[i][j]+np.sum(dibk_list)
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
 
     def cpower_saveload(self, box, skip=1.):
-        kmin = 2.*np.pi/self.survey.Lboxes[box]
+        R = self.survey.Lboxes[box]
+        kmin = np.pi/R
         klist = np.arange(kmin, self.survey.kmax, skip*kmin)
-        cpfname = "conv_data/cpower_"+str(self.survey.Lboxes[box])+"_"+str(self.survey.kmax)+".npy"
+        cpfname = "conv_data/cpower_"+str(R)+"_"+str(self.survey.kmax)+".npy"
         gfratio = self.cosmology.growth_factor(self.survey.z)/self.cosmology.growth_factor(0.0)
         if isfile(cpfname):
             plist = np.load(cpfname)
             if (self.survey.z!=0.0):
                 plist = plist*gfratio
         else:
-            plist = np.array([self.conv_power_spectrumz(k, L=self.survey.Lboxes[box])/gfratio for k in klist])
+            plist = np.array([self.conv_power_spectrumz(k, L=R)/gfratio for k in klist])
             np.save(cpfname, plist)
         return klist[:], plist[:]
 
@@ -179,9 +179,8 @@ class ibkLFisher(Fisher):
         Q2 = np.log(self.cosmology.power_spectrumz(k*fac, self.survey.z))
         Q1 = np.log(self.cosmology.power_spectrumz(k, self.survey.z))
         return (Q2-Q1)/(np.log(k*fac)-np.log(k))
-    #def ibkL_integrand(self, z, b1, b2,
 
-    def mpi_conv_power(self, klist, L=600.):
+    def mpi_conv_power(self, klist, R=300.):
         listall=[]
         #MPI.Init()
         comm = MPI.COMM_WORLD
@@ -200,7 +199,7 @@ class ibkLFisher(Fisher):
                 kdata = None
 
             kdata = comm.scatter(kdata, root=0)
-            kdata = self.conv_power_spectrumz(kdata, L)
+            kdata = self.conv_power_spectrumz(kdata, R)
             comm.Barrier()
 
             kdata = comm.gather(kdata, root=0)
@@ -212,20 +211,20 @@ class ibkLFisher(Fisher):
         # do anything that is left
         if (bdown*Ncores < Nk):
             kdata = klist[bdown*Ncores:Nk]
-            kdata = self.conv_power_spectrumz(kdata, L)
+            kdata = self.conv_power_spectrumz(kdata, R)
             listall = np.append(listall, kdata)
             comm.Barrier()
 
         print (listall)
         return listall.flatten()
 
-    def conv_power_spectrumz(self, k, L=600.):
+    def conv_power_spectrumz(self, k, R=300.):
         """return the convoled power at (k, self.survey.z) for a cubic box of side L
         """
-        Volume=4.*np.pi*np.power(L/2.0, 3.0)/3.
+        Volume=4.*np.pi*np.power(R, 3.0)/3.
         fac = Volume/(4.*np.pi*np.pi)
-        kmin = 2.*np.pi/L
-        integrand = lambda q, mu: q*q * np.power(top_hat(q, L), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
+        kmin = np.pi/R
+        integrand = lambda q, mu: q*q * np.power(top_hat(q, R), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
         results = nquad(integrand, [[kmin/10., self.survey.kmax*10.], [-1.,1.]], opts=[options, options])
         return fac*results[0]
@@ -233,19 +232,15 @@ class ibkLFisher(Fisher):
 class itkLFisher(ibkLFisher):
     """ similar to ibkLFisher but for the squeezed trispectrum
     """
-
     def DeltaitSq(self, k=0.5, cp=1.0, box=0):
-        Lbox = self.survey.Lboxes[box]  # get the physical length of the box # specified
-        Vfactor = np.pi*np.power(Lbox/self.survey.Lsurvey, 3.0)/6.0
-        Volume = 4.*np.pi*np.power(Lbox/2.0, 3.0)/3.
-        kmin = 2.*np.pi/Lbox
+        R = self.survey.Lboxes[box]  # get the radius of the spherical subvolume
+        Vfactor = 4. np.pi*np.power(R/self.survey.Lsurvey, 3.0)/3.0
+        Volume = 4.*np.pi*np.power(R, 3.0)/3.
+        kmin = np.pi/R
         b1 = self.b1fid
         Kp = self.Kaiser_factor_p(b1)
-        #NkL = np.power(Lbox, 3.0)*np.power(k, 2.0)*kmin/4./np.pi/np.pi
-        NkL = 2.*np.pi*np.power(k/kmin, 2.0)
+        NkL=16.*np.power(np.pi, 5.0)*np.power(k/kmin, 2.0)/3.0
         sigma=b1*np.sqrt(Kp*self.sigmaSqs[box])
-        #cpower = b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)
-        #cpower = Kp*b1*b1*self.cosmology.power_spectrumz(k, self.survey.z)/60. # 60 is ad-hoc at the moment
         cpower = Kp*b1*b1*cp
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + Kp*self.survey.Pshot
@@ -313,8 +308,6 @@ class itkLFisher(ibkLFisher):
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
 
         for box in range(len(self.survey.Lboxes)):
-            #print ("box number: ", box, "/", len(self.survey.Lboxes))
-
             klist, plist = self.cpower_saveload(box, skip=skip)
 
             for i in range(self.nparams):
