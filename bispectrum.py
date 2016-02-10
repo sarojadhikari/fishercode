@@ -67,14 +67,18 @@ class ibkLFisher(Fisher):
 
     def sigmaWLPSq(self, Lbox=300.):
         """
+        The integrand is $\int dcq W_R^2(q) P^2(q)$ and give results in units
+        of V
         """
         R=Lbox
+        #Volume = 4.*np.pi*np.power(R, 3.0)/3.0
         integrand = lambda k: np.power(k*top_hat(k, R)*self.cosmology.power_spectrumz(k, self.survey.z), 2.0)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
 
     def sigmaWLSq(self, Lbox=300.):
         """the integrand only has the window function and not the power spectrum
+        It is $\int \dcq W_R^2(q)$, and results in the units of 1/V
         """
         integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
@@ -91,6 +95,13 @@ class ibkLFisher(Fisher):
         return results[0]/(2.*np.pi**2.0)
 
     def sigmadLSq(self, Lbox=300.):
+        """
+        This is $\int dcq W_R^2(q) P(q)$, so there is no volume prefactor
+        necessary with our convention for the window function (which does
+        not have the volume in it too)
+
+        However, other sigmaSq quantities will need appropriate volume factors
+        """
         integrand = lambda k: np.power(k*top_hat(k, Lbox), 2.0)*self.cosmology.power_spectrumz(k, self.survey.z)
         results = quad(integrand, GKMIN, GKMAX, limit=QLIMIT)
         return results[0]/(2.*np.pi**2.0)
@@ -223,6 +234,13 @@ class ibkLFisher(Fisher):
         """
         Volume=4.*np.pi*np.power(R, 3.0)/3.
         fac = Volume/(4.*np.pi*np.pi)
+        """
+        note that the window function does not have the volume factor in it
+        in the code; so the prefactor is V instead of 1/V as in the paper to
+        account for this. Similarly, all the factors in front of the integrated
+        quantities have different volume factors than the paper to account for
+        this.
+        """
         kmin = np.pi/R
         integrand = lambda q, mu: q*q * np.power(top_hat(q, R), 2.0)* self.cosmology.power_spectrumz(np.sqrt(k*k+q*q-2*k*q*mu), self.survey.z)
         options={'limit':QLIMIT}
