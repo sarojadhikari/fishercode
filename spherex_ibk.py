@@ -28,27 +28,27 @@ def ng(z):
     lin = ng2+(3.0-z)*(ng1-ng2)/(zmax - zmin)
     return np.power(10., lin)
 
-Lbs=[1000.]
+Lbs=[300.]
 cnt = 0
 
 for z in np.arange(zmin+zstep/2, zmax, zstep):
     Ls = fidcosmo.volume_factor(z, zstep)**(1./3)
     # select subvolumes according to Ls i.e. if the volume is large enough --- for example for larger z --- it maybe useful to make big subvolumes.
     if (z<3.6):
-        Lbs = [200., 300.]
+        Lbs = [200.]
     elif (z<3.6):
         Lbs = [200., 300., 1500.]
     else:
         Lbs = [200., 2000.]
 
-    TotalSV = np.sum([4.*np.pi*np.power(Lbs[i]/2.0, 3.0) for i in range(len(Lbs))])
+    TotalSV = np.sum([4.*np.pi*np.power(Lbs[i]/2.0, 3.0)/3.0 for i in range(len(Lbs))])
     VolumeRatio = int(np.power(Ls, 3.0)/TotalSV)
 
     if VolumeRatio>=1.0:
         ngb = ng(z)
         survey=bispectrum.Survey(z=z, Lsurvey=Ls, ngbar=ngb, kmax=KMAX, Lboxes=Lbs)
-        #bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
-        bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL", "b3"], param_names=["$b_1$", "$b_2$", r"$g_{\rm NL}$", "$b_3$"], param_values=[1.95, 0.5, 0.0, 0.0])
+        bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
+        #bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL", "b3"], param_names=["$b_1$", "$b_2$", r"$g_{\rm NL}^{\rm local}$", "$b_3$"], param_values=[1.95, 0.5, 0.0, 0.0])
         bf.fisher()
 
         if (cnt==0):
@@ -68,7 +68,7 @@ bf.fisher_matrix=total_fisher
 #np.savetxt("fmtk_SPHEREx_1.95_0.5_0.0_0.2_3.txt", total_fisher)
 bf.covariance()
 
-bf.plot_error_matrix([0,1,2])
+bf.plot_error_matrix([0,1,2], nbinsx=5)
 plt.show()
 
 #sys.exit()
