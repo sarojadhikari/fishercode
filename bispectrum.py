@@ -169,7 +169,7 @@ class ibkLFisher(Fisher):
             if (self.survey.z!=0.0):
                 plist = plist*gfratio
         else:
-            plist = np.array([self.conv_power_spectrumz(k, L=R)/gfratio for k in klist])
+            plist = np.array([self.conv_power_spectrumz(k, R)/gfratio for k in klist])
             np.save(cpfname, plist)
         return klist[:], plist[:]
 
@@ -234,7 +234,7 @@ class itkLFisher(ibkLFisher):
     """
     def DeltaitSq(self, k=0.5, cp=1.0, box=0):
         R = self.survey.Lboxes[box]  # get the radius of the spherical subvolume
-        Vfactor = 4. np.pi*np.power(R/self.survey.Lsurvey, 3.0)/3.0
+        Vfactor = 4.*np.pi*np.power(R/self.survey.Lsurvey, 3.0)/3.0
         Volume = 4.*np.pi*np.power(R, 3.0)/3.
         kmin = np.pi/R
         b1 = self.b1fid
@@ -319,7 +319,6 @@ class itkLFisher(ibkLFisher):
 
         self.fisher_matrix=np.matrix(fmatrix)
         return self.fisher_matrix
-
 
 class Survey:
     """ large-scale structure survey class with fixed z but kmin/kmax and V specified
