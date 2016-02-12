@@ -263,7 +263,7 @@ class itkLFisher(ibkLFisher):
         term1 = np.power(sigma, 2.0) + Kp*self.survey.Pshot/Volume
         term2 = cpower + Kp*self.survey.Pshot
 
-        return Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
+        return Volume * Vfactor * term1 * np.power(term2, 3.0)/NkL/np.power(sigma, 4.0)/np.power(cpower, 4.0)
 
     def itgNL(self, k, b1, gNL, box=0):
         """
