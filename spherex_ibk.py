@@ -35,7 +35,7 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
     Ls = fidcosmo.volume_factor(z, zstep)**(1./3)
     # select subvolumes according to Ls i.e. if the volume is large enough --- for example for larger z --- it maybe useful to make big subvolumes.
     if (z<3.6):
-        Lbs = [200.]
+        Lbs = [200., 300.]
     elif (z<3.6):
         Lbs = [200., 300., 1500.]
     else:
@@ -47,15 +47,15 @@ for z in np.arange(zmin+zstep/2, zmax, zstep):
     if VolumeRatio>=1.0:
         ngb = ng(z)
         survey=bispectrum.Survey(z=z, Lsurvey=Ls, ngbar=ngb, kmax=KMAX, Lboxes=Lbs)
-        bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
-        #bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL", "b3"], param_names=["$b_1$", "$b_2$", r"$g_{\rm NL}^{\rm local}$", "$b_3$"], param_values=[1.95, 0.5, 0.0, 0.0])
+        #bf=bispectrum.ibkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL"], param_names=["$b_1$", "$b_2$", r"$f_{\rm NL}$"], param_values=[1.95, 0.5, 0.0])
+        bf=bispectrum.itkLFisher(survey, fidcosmo, params=["b1", "b2", "fNL", "b3"], param_names=["$b_1$", "$b_2$", r"$g_{\rm NL}^{\rm local}$", "$b_3$"], param_values=[1.95, 0.5, 0.0, 0.0])
         bf.fisher()
 
         if (cnt==0):
-            total_fisher = bf.fisher_matrix * VolumeRatio
+            total_fisher = bf.fisher_matrix
             cnt=cnt+1
         else:
-            total_fisher = total_fisher + bf.fisher_matrix * VolumeRatio
+            total_fisher = total_fisher + bf.fisher_matrix
             cnt=cnt+1
 
         #print (cnt)
