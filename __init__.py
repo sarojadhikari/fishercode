@@ -1,2 +1,1 @@
-import fisher, bispectrum, functions
-from cosmology import cosmo
+from fishercode.fisher import Fisher
