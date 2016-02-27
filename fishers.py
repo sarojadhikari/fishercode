@@ -46,8 +46,6 @@ class FisherMatrices(object):
             fmcnt=0
             for fm in self.fms:
                 errorellipse, xyaxes=fm.error_ellipse(fm.params[0],fm.params[1], nstd=nstd, clr=self.clrs[fmcnt], alpha=self.alpha)
-                #ere2, xyaxes2 = self.error_ellipse(fm.params[0], fm.params[1], nstd=2, clr="r", alpha=0.1)
-                #allaxes.add_artist(ere2)
                 allaxes.add_artist(errorellipse)
                 allaxes.axis(xyaxes)
                 fmcnt = fmcnt + 1

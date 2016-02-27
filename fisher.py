@@ -98,13 +98,12 @@ class Fisher(object):
 
     def save_fisher_matrix(self, fname):
         """
-        save the current fisher matrix and relevant information in the DETF format as name.fisher
+        save the current fisher matrix---the whole class in a file
+        using the pickle module
         """
-        hd=""
-        for param in self.parameters:
-            hd=hd+param+" "
-
-        np.savetxt(fname, self.fisher_matrix, header=hd)
+        import pickle
+        pickle.dump(self, open(fname, "wb"))
+        #np.savetxt(fname, self.fisher_matrix, header=hd)
         return 0
 
     def load_fisher_matrix(self, fname):
