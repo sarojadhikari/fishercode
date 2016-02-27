@@ -3,6 +3,7 @@
   :ynopsis: collection of fisher matrices; useful for combined visualization
 """
 import matplotlib.pyplot as plt
+import pickle
 
 class FisherMatrices(object):
     """
@@ -11,11 +12,19 @@ class FisherMatrices(object):
     def __init__(self, fisherlist=[]):
         self.fms = fisherlist
         self.Nfms = len(self.fms)
-        self.clrs = ["g", "b", "r", "black", "o"]
+        self.clrs = ["g", "b", "r", "black", "o", "magenta"]
         self.alpha = 0.2
+
+    def add_fisher_file(self, filename):
+        """ open a saved fisher file (using pickle) and add it to the list
+        of fisher matrices
+        """
+        fm = pickle.load(open(filename, "rb"))
+        self.add_fisher_matrix(fm)
 
     def add_fisher_matrix(self, fm):
         self.fms.append(fm)
+        self.Nfms = len(self.fms)
 
     add_fm = add_fisher_matrix
 
