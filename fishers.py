@@ -34,13 +34,7 @@ class FisherMatrices(object):
         """
         fac = len(params)-1
         #plt.close('all')
-        plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
-
         f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
-        for i in range(fac):
-            for j in range(fac):
-                if (j>i):
-                    allaxes[i][j].axis('off')
 
         if fac<2:
             fmcnt=0
@@ -75,3 +69,9 @@ class FisherMatrices(object):
                         axis.set_xlabel(self.fms[0].param_names[i], fontsize=14)
                         axis.set_ylabel(self.fms[0].param_names[j], fontsize=14)
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
+        for i in range(fac):
+            for j in range(fac):
+                if (j>i):
+                    allaxes[i][j].axis('off')
+
+        plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))

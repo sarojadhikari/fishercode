@@ -183,14 +183,10 @@ class Fisher(object):
         """
         fac = len(params)-1
         #plt.figure(num=None, figsize=(fac*xs, fac*ys))
-        plt.close('all')
-        plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
+        #plt.close('all')
 
         f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
-        for i in range(fac):
-            for j in range(fac):
-                if (j>i):
-                    allaxes[i][j].axis('off')
+
 
         if fac<2:
             errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.4)
@@ -218,3 +214,10 @@ class Fisher(object):
                         axis.set_xlabel(self.param_names[i], fontsize=14)
                         axis.set_ylabel(self.param_names[j], fontsize=14)
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
+
+        for i in range(fac):
+            for j in range(fac):
+                if (j>i):
+                    allaxes[i][j].axis('off')
+                    
+        plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
