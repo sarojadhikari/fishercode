@@ -9,8 +9,8 @@ class FisherMatrices(object):
     """
     This defines a collection of fisher matrices (Fisher class)
     """
-    def __init__(self, fisherlist=[]):
-        self.fms = fisherlist
+    def __init__(self):
+        self.fms = []
         self.Nfms = len(self.fms)
         self.clrs = ["g", "b", "r", "black", "o", "magenta"]
         self.alpha = 0.2
