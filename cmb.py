@@ -6,7 +6,6 @@
 
 import numpy as np
 from fishercode import Fisher
-#from classy import Class
 import camb
 from camb import model, initialpower
 
@@ -82,46 +81,6 @@ class CMBFisher(Fisher):
         self.include_polarization=pol
         Fisher.__init__(self, params, param_values, param_names, priors)
 
-    def theoryClsCLASS(self, LMAX):
-        """get the theoretical :math:`C_l` values for the current cosmology using CLASS code.
-        The cosmological parameters are set from the current :class:`.cosmology`.
-        The power sepctra are also set as variables in the cosmology class.
-
-        If the include_polarization switch is set to True, then it also sets
-
-        """
-        params={
-            'output': 'tCl',
-            'l_max_scalars': LMAX,
-            'modes': 'st',
-            'A_s': self.cosmology.A,
-            'n_s': self.cosmology.n,
-            'r': self.cosmology.r,
-            'h': self.cosmology.h,
-            'omega_b': self.cosmology.Ob0*self.cosmology.h**2.0,
-            'omega_cdm': self.cosmology.Om0*self.cosmology.h**2.0,
-            'tau_reio': self.cosmology.tau,
-            }
-
-        if (self.include_polarization):
-            params['output']='tCl,pCl'
-
-        cosmo=Class()
-        cosmo.set(params)
-        cosmo.compute()
-
-        self.cosmology.TTCls=17.0E12*cosmo.raw_cl(LMAX)['tt']
-        self.cosmology.ells=cosmo.raw_cl(LMAX)['ell']
-
-        if (self.include_polarization):
-            self.cosmology.TECls=17.0E12*cosmo.raw_cl(LMAX)['te']
-            self.cosmology.BBCls=17.0E12*cosmo.raw_cl(LMAX)['bb']
-            self.cosmology.EECls=17.0E12*cosmo.raw_cl(LMAX)['ee']
-
-        cosmo.struct_cleanup()
-
-        return self.cosmology.TTCls
-
     def theoryCls(self, LMAX):
         """get the theoretical :math:`C_l` values for the current cosmology using CLASS code.
         The cosmological parameters are set from the current :class:`.cosmology`.
@@ -140,14 +99,10 @@ class CMBFisher(Fisher):
             pars.WantTensors = True
 
         results = camb.get_results(pars)
-
         powers = results.get_cmb_power_spectra(pars)
-
         totCL = powers['total']
 
         self.cosmology.TTCls = totCL[:LMAX+1,0]
-        # the factor 17.0 is a quick fix for now as i don't understand the units used in
-        # the class code; it is necessary to reproduce the Cls in microK^2
         self.cosmology.ells=np.arange(LMAX+1)
 
         if (self.include_polarization):
@@ -234,7 +189,6 @@ class CMBFisher(Fisher):
 
         fmatrix=np.array([[0.]*self.nparams]*self.nparams)
 
-        # scope for using multiprocessing here
         output=mp.Queue()
         processes=[mp.Process(target=self.fisherXX, args=(xx, output)) for xx in XX]
 
