@@ -4,10 +4,7 @@
 
 """
 
-#import sys
-#sys.path.append("/home/adhikari/Projects/fishercode/")
 import numpy as np
-
 from fishercode import Fisher
 #from classy import Class
 import camb
@@ -139,21 +136,24 @@ class CMBFisher(Fisher):
         pars.InitPower.set_params(ns=self.cosmology.n, r=self.cosmology.r)
         pars.set_for_lmax(LMAX)
 
+        if (self.cosmology.r > 0.0):
+            pars.WantTensors = True
+
         results = camb.get_results(pars)
 
         powers = results.get_cmb_power_spectra(pars)
 
         totCL = powers['total']
 
-        self.cosmology.TTCls = totCL[:,0]
+        self.cosmology.TTCls = totCL[:LMAX+1,0]
         # the factor 17.0 is a quick fix for now as i don't understand the units used in
         # the class code; it is necessary to reproduce the Cls in microK^2
-        self.cosmology.ells=np.arange(totCL.shape[0])
+        self.cosmology.ells=np.arange(LMAX+1)
 
         if (self.include_polarization):
-            self.cosmology.TECls = totCL[:,3]
-            self.cosmology.BBCls = totCL[:,2]
-            self.cosmology.EECls = totCL[:,1]
+            self.cosmology.TECls = totCL[:LMAX+1,3]
+            self.cosmology.BBCls = totCL[:LMAX+1,2]
+            self.cosmology.EECls = totCL[:LMAX+1,1]
 
         return self.cosmology.TTCls
 
