@@ -10,7 +10,7 @@ import camb
 from camb import model, initialpower
 
 import multiprocessing as mp
-from functions import degsq2rad, deg2rad
+from utilities.functions import degsq2rad, deg2rad
 
 class CMBExperiment(object):
     """ CMB experiment class
@@ -92,7 +92,7 @@ class CMBFisher(Fisher):
         # using camb
         pars = camb.CAMBparams()
         pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0, omch2=self.cosmology.Om0*self.cosmology.h**2.0, omk=0, tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
-        pars.InitPower.set_params(ns=self.cosmology.n, r=self.cosmology.r)
+        pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
         pars.set_for_lmax(LMAX)
 
         if (self.cosmology.r > 0.0):
