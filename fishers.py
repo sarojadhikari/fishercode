@@ -12,8 +12,11 @@ class FisherMatrices(object):
     def __init__(self):
         self.fms = []
         self.Nfms = len(self.fms)
-        self.clrs = ["g", "b", "r", "black", "o", "magenta"]
-        self.alpha = 0.2
+        self.clrs = ["g", "b", "r", "black", "orange", "magenta"]
+        self.linestyles = ['-', '--', '-', "-"]
+        self.linewidths = [1.5, 2.0, 2.5, 1.5]
+        self.fills = [False, False, True, True]
+        self.alphas = [0.8, 0.8, 0.2, 0.2]
 
     def add_fisher_file(self, filename):
         """ open a saved fisher file (using pickle) and add it to the list
@@ -40,6 +43,8 @@ class FisherMatrices(object):
             fmcnt=0
             for fm in self.fms:
                 errorellipse, xyaxes=fm.error_ellipse(fm.params[0],fm.params[1], nstd=nstd, clr=self.clrs[fmcnt], alpha=self.alpha)
+                errorellipse.set_linestyle(self.linestyles[fmcnt])
+                errorellipse.set_fill(False)
                 allaxes.add_artist(errorellipse)
                 allaxes.axis(xyaxes)
                 fmcnt = fmcnt + 1
@@ -53,7 +58,10 @@ class FisherMatrices(object):
                     if (j>i):
                         fmcnt=0
                         for fm in self.fms:
-                            errorellipse, xyaxes=fm.error_ellipse(i,j, nstd=nstd, clr=self.clrs[fmcnt], alpha=self.alpha)
+                            errorellipse, xyaxes=fm.error_ellipse(i,j, nstd=nstd, clr=self.clrs[fmcnt], alpha=self.alphas[fmcnt])
+                            errorellipse.set_linestyle(self.linestyles[fmcnt])
+                            errorellipse.set_linewidth(self.linewidths[fmcnt])
+                            errorellipse.set_fill(self.fills[fmcnt])
                             jp=i
                             ip=j-1
                             axis=allaxes[ip][jp]

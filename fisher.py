@@ -219,5 +219,5 @@ class Fisher(object):
             for j in range(fac):
                 if (j>i):
                     allaxes[i][j].axis('off')
-                    
+
         plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
