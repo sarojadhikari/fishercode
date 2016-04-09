@@ -13,10 +13,10 @@ class FisherMatrices(object):
         self.fms = []
         self.Nfms = len(self.fms)
         self.clrs = ["g", "b", "r", "black", "orange", "magenta"]
-        self.linestyles = ['-', '--', '-', "-"]
+        self.linestyles = ['-', '-', '-', "-"]
         self.linewidths = [1.5, 2.0, 2.5, 1.5]
-        self.fills = [False, False, True, True]
-        self.alphas = [0.8, 0.8, 0.2, 0.2]
+        self.fills = [False, True, True, True]
+        self.alphas = [0.8, 0.2, 0.2, 0.2]
 
     def add_fisher_file(self, filename):
         """ open a saved fisher file (using pickle) and add it to the list

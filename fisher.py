@@ -101,8 +101,10 @@ class Fisher(object):
         save the current fisher matrix---the whole class in a file
         using the pickle module
         """
-        import pickle
-        pickle.dump(self, open(fname, "wb"))
+        import pickle, copy
+        pklclass = copy.copy(self)
+        pklclass.cosmology = None # there are things in cosmology now that cannot be pickled
+        pickle.dump(pklclass, open(fname, "wb"))
         #np.savetxt(fname, self.fisher_matrix, header=hd)
         return 0
 
