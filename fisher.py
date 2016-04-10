@@ -13,10 +13,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.rcParams.update({'text.usetex': True})
 matplotlib.rcParams.update({'axes.formatter.useoffset': False})
-matplotlib.rcParams.update({'font.size': 12})
-matplotlib.rcParams.update({'figure.autolayout': True})
-matplotlib.rcParams.update({'ytick.major.pad': 8})
-matplotlib.rcParams.update({'xtick.major.pad': 6})
 
 class Fisher(object):
     """
