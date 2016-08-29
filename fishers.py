@@ -23,6 +23,7 @@ class FisherMatrices(object):
         of fisher matrices
         """
         fm = pickle.load(open(filename, "rb"))
+        fm.covariance()
         self.add_fisher_matrix(fm)
 
     def add_fisher_matrix(self, fm):
