@@ -91,7 +91,9 @@ class CMBFisher(Fisher):
         """
         # using camb
         pars = camb.CAMBparams()
-        pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0, omch2=self.cosmology.Om0*self.cosmology.h**2.0, omk=0, tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
+        pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0, 
+                           omch2=self.cosmology.Oc0*self.cosmology.h**2.0, omk=0, 
+                           tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
         pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
         pars.set_for_lmax(LMAX)
 
