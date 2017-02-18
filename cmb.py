@@ -3,7 +3,6 @@
     :synopsis: define a class for a CMB experiment
 
 """
-
 import numpy as np
 from fishercode import Fisher
 import camb
@@ -87,12 +86,11 @@ class CMBFisher(Fisher):
         The power sepctra are also set as variables in the cosmology class.
 
         If the include_polarization switch is set to True, then it also sets
-
         """
         # using camb
         pars = camb.CAMBparams()
-        pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0, 
-                           omch2=self.cosmology.Oc0*self.cosmology.h**2.0, omk=0, 
+        pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0,
+                           omch2=self.cosmology.Oc0*self.cosmology.h**2.0, omk=0,
                            tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
         pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
         pars.set_for_lmax(LMAX)
@@ -132,17 +130,19 @@ class CMBFisher(Fisher):
         """
         v=getattr(self.cosmology, param)
         pv=param_value
-        setfunc=getattr(self.cosmology, "set_"+param)
+        setattr(self.cosmology, param, pv*(1.+self.diff_percent))
 
-        setfunc(pv*(1.+self.diff_percent))
         self.theoryCls(self.experiment.lmax)
         plus_value=self.getCls(ps)
-        setfunc(pv*(1.-self.diff_percent))
+        setattr(self.cosmology, param, pv*(1.-self.diff_percent))
+
         self.theoryCls(self.experiment.lmax)
         minus_value=self.getCls(ps)
         finite_diff=plus_value-minus_value
         delta_pv=2*self.diff_percent*pv
-        setfunc(v)
+
+        # set the default value back
+        setattr(self.cosmology, param, v)
         return (finite_diff)/delta_pv
 
     def noise_weight(self, ps='tt'):
