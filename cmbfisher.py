@@ -102,27 +102,27 @@ class CMBFisher(Fisher):
         powers = results.get_cmb_power_spectra(pars)
         totCL = powers['total']
 
-        self.cosmology.TTCls = totCL[:LMAX+1,0]
-        self.cosmology.ells=np.arange(LMAX+1)
+        self.TTCls = totCL[:LMAX+1,0]
+        self.ells=np.arange(LMAX+1)
 
         if (self.include_polarization):
-            self.cosmology.TECls = totCL[:LMAX+1,3]
-            self.cosmology.BBCls = totCL[:LMAX+1,2]
-            self.cosmology.EECls = totCL[:LMAX+1,1]
+            self.TECls = totCL[:LMAX+1,3]
+            self.BBCls = totCL[:LMAX+1,2]
+            self.EECls = totCL[:LMAX+1,1]
 
-        return self.cosmology.TTCls
+        return self.TTCls
 
     def getCls(self, ps='tt'):
         """return one of the TT, TE, EE, BB Cls
         """
         if (ps=='te'):
-            return self.cosmology.TECls
+            return self.TECls
         elif (ps=='bb'):
-            return self.cosmology.BBCls
+            return self.BBCls
         elif (ps=='ee'):
-            return self.cosmology.EECls
+            return self.EECls
         else:
-            return self.cosmology.TTCls
+            return self.TTCls
 
     def Cls_deriv(self, param, param_value, ps='tt'):
         """compute the numerical derivative of :math:`C_ls`, the angular temperature power spectrum
