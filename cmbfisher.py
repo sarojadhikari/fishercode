@@ -112,8 +112,8 @@ class CMBFisher(Fisher):
             self.EEDls = totCL[:LMAX+1,1]
 
         self.transfer_functions = camb.get_transfer_functions(pars)
-        self.TTCls = 2.*np.pi*self.TTDls/((self.ells)*(self.ells+1))
-        self.TTCls[0] = 0.
+        TTCls = 2.*np.pi*self.TTDls[1:]/((self.ells[1:])*(self.ells[1:]+1))
+        self.TTCls = np.append([0.], TTCls)
         return self.TTCls
 
     def getCls(self, ps='tt'):
