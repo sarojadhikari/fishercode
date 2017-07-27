@@ -94,6 +94,7 @@ class CMBFisher(Fisher):
                            tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
         pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
         pars.set_for_lmax(LMAX)
+        pars.DoLensing=False
 
         if (self.cosmology.r > 0.0):
             pars.WantTensors = True
@@ -102,14 +103,17 @@ class CMBFisher(Fisher):
         powers = results.get_cmb_power_spectra(pars)
         totCL = powers['total']
 
-        self.TTCls = totCL[:LMAX+1,0]
+        self.TTDls = totCL[:LMAX+1,0]
         self.ells=np.arange(LMAX+1)
 
         if (self.include_polarization):
-            self.TECls = totCL[:LMAX+1,3]
-            self.BBCls = totCL[:LMAX+1,2]
-            self.EECls = totCL[:LMAX+1,1]
+            self.TEDls = totCL[:LMAX+1,3]
+            self.BBDls = totCL[:LMAX+1,2]
+            self.EEDls = totCL[:LMAX+1,1]
 
+        self.transfer_functions = camb.get_transfer_functions(pars)
+        self.TTCls = 2.*np.pi*self.TTDls/((self.ells)*(self.ells+1))
+        self.TTCls[0] = 0.
         return self.TTCls
 
     def getCls(self, ps='tt'):
