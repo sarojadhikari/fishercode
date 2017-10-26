@@ -8,9 +8,6 @@ from fishercode import Fisher
 import camb
 from camb import model, initialpower
 
-import multiprocessing as mp
-from utilities.functions import degsq2rad, deg2rad
-
 class CMBExperiment(object):
     """ CMB experiment class
 
@@ -23,12 +20,15 @@ class CMBExperiment(object):
 
     """
 
-    def __init__(self, DeltaOmega=41253., LMAX=2000, beamsize=5.0, w=8000., name=None, alias=None):
+    def __init__(self, DeltaOmega=41253., LMIN=2, LMAX=2000, beamsize=5.0, w=8000.,
+                 name=None, alias=None):
         """The CMB experiment class.
 
         """
         self.lmax=LMAX
-        self.theta=deg2rad(beamsize/60.)    # beamsize is specified in arcmin
+        self.lmin=LMIN
+        self.lmaxT = self.lmaxP = LMAX
+        self.theta=np.deg2rad(beamsize/60.)    # beamsize is specified in arcmin
         self.wT=w   # (1/(pixel size*noise per pixel^2)
         self.name=name
         self.fsky=DeltaOmega/41253
@@ -36,7 +36,7 @@ class CMBExperiment(object):
         if (alias):
             self.name=alias
         if name==None:
-            self.dOm = degsq2rad(DeltaOmega) # the survey area in degree square is converted to radians square here
+            self.dOm = np.deg2rad(DeltaOmega)**2.0 # the survey area in degree square is converted to radians square here
         if name=="CVlimited":
             """define a cosmic variance limited CMB temperature and polarization experiment
             with the following properties
@@ -44,20 +44,26 @@ class CMBExperiment(object):
             if not(alias):
                 self.name="CVlimited"
             self.lmax=2500
-            self.fsky=0.8
-            # one does not need to worry about wT, wP, and noise per pixel; the weight for the
-            # noise term is set to zero for this experiment in the CMBFisher class.
+            self.lmaxT = self.lmaxP = self.lmax
+            self.fsky = 1
+            self.fskyT = self.fskyE = self.fskyP = self.fskyC = self.fsky
+            self.wT = np.infty
+            self.wP = np.infty
 
-        if name=="Planck":
+        if name=="Planck": # this really is Planck hiL
             if not(alias):
                 self.name="Planck"
-            self.lmax=2000
+            self.lmaxP=1996
+            self.lmaxT=2508
+            self.lmax = max(self.lmaxP, self.lmaxT)
+            self.lmin = 30
             self.fsky=0.7
+            self.fskyT = self.fskyE = self.fskyP = self.fskyC = self.fsky
             self.frequency=143
-            self.theta=deg2rad(7./60.)   # in arcmin
+            self.theta=np.deg2rad(7./60.)   # in arcmin
             self.noiseppT=6.0  # noise per pixel for temperature in microK
             self.noiseppP=11.5    # noise per pixel for polarization in microK
-            self.wT=1.0/(self.theta*self.noiseppT)**2.0
+            self.wT=1.0/(self.theta*self.noiseppT)**2.0 # units of 1/microK^2
             self.wP=1.0/(self.theta*self.noiseppP)**2.0
 
 class CMBFisher(Fisher):
@@ -71,7 +77,7 @@ class CMBFisher(Fisher):
 
     """
 
-    def __init__(self, expt, cosmology, params=[], param_values=[], param_names=[], priors=[], pol=False):
+    def __init__(self, expt, cosmology, params=[], param_values=[], param_names=[], priors=[], pol=True):
         """Set the experiment and cosmology for CMB Fisher computations.
         Also, set the parameters and priors if specified
         """
@@ -80,40 +86,45 @@ class CMBFisher(Fisher):
         self.include_polarization=pol
         Fisher.__init__(self, params, param_values, param_names, priors)
 
-    def theoryCls(self, LMAX):
+    def theoryCls(self, muKunits = True):
         """get the theoretical :math:`C_l` values for the current cosmology using CLASS code.
         The cosmological parameters are set from the current :class:`.cosmology`.
         The power sepctra are also set as variables in the cosmology class.
 
         If the include_polarization switch is set to True, then it also sets
+
+        the noise are usually set in muK units; so muKunits needs to be True for that
         """
+        LMAX = self.experiment.lmax
+
         # using camb
         pars = camb.CAMBparams()
         pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0,
                            omch2=self.cosmology.Oc0*self.cosmology.h**2.0, omk=0,
                            tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
         pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
-        pars.set_for_lmax(LMAX)
-        pars.DoLensing=False
+        pars.set_for_lmax(LMAX+200)
 
         if (self.cosmology.r > 0.0):
             pars.WantTensors = True
 
         results = camb.get_results(pars)
-        powers = results.get_cmb_power_spectra(pars)
+        powers = results.get_cmb_power_spectra(pars, raw_cl=True)
         totCL = powers['total']
 
-        self.TTDls = totCL[:LMAX+1,0]
-        self.ells=np.arange(LMAX+1)
+
+        mufac = 1
+        if (muKunits):
+            mufac = (2.7255E6)**2.0
+
+        self.TTCls = mufac*totCL[:LMAX+1,0]
 
         if (self.include_polarization):
-            self.TEDls = totCL[:LMAX+1,3]
-            self.BBDls = totCL[:LMAX+1,2]
-            self.EEDls = totCL[:LMAX+1,1]
+            self.TECls = mufac*totCL[:LMAX+1,3]
+            self.BBCls = mufac*totCL[:LMAX+1,2]
+            self.EECls = mufac*totCL[:LMAX+1,1]
 
         self.transfer_functions = camb.get_transfer_functions(pars)
-        TTCls = 2.*np.pi*self.TTDls[1:]/((self.ells[1:])*(self.ells[1:]+1))
-        self.TTCls = np.append([0.], TTCls)
         return self.TTCls
 
     def getCls(self, ps='tt'):
@@ -135,13 +146,11 @@ class CMBFisher(Fisher):
         v=getattr(self.cosmology, param)
         pv=param_value
         setattr(self.cosmology, param, pv*(1.+self.diff_percent))
+        plus_value = self.theoryCls(self.experiment.lmax)
 
-        self.theoryCls(self.experiment.lmax)
-        plus_value=self.getCls(ps)
         setattr(self.cosmology, param, pv*(1.-self.diff_percent))
+        minus_value = self.theoryCls(self.experiment.lmax)
 
-        self.theoryCls(self.experiment.lmax)
-        minus_value=self.getCls(ps)
         finite_diff=plus_value-minus_value
         delta_pv=2*self.diff_percent*pv
 
@@ -160,6 +169,16 @@ class CMBFisher(Fisher):
             return 1./self.experiment.wP
         else:
             return 0.
+
+    def noise_powers(self):
+        """
+        the noise power spectra
+        """
+        th = self.experiment.theta
+        lrange = range(0, self.experiment.lmax+1) # start from zero for easy indexing
+        Tnoise = np.array([self.noise_weight('tt')*np.exp((th*l)**2.0) for l in lrange])
+        Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0) for l in lrange])
+        return np.array([Tnoise, Enoise])
 
     def fisherXX(self, ps, output):
         """computes the fisher matrix given the parameters, experiment and cosmology definitions
@@ -185,6 +204,66 @@ class CMBFisher(Fisher):
 
         output.put(np.array(np.matrix(fmatrix)))
         return np.array(np.matrix(fmatrix))  # numpy array for easy indexing
+
+    def FullCovarianceMatrix(self):
+        """
+        construct the full "block-diagonal" CMB covariance matrix for data
+            {ClTT, ClTE, ClEE}
+        that is
+            [[TTTT, TTTE, TTEE],
+             [TETT, TETE, TEEE],
+             [EETT, EETE, EEEE]]
+
+        See for example: astro-ph/9807130
+        """
+        lrangeT = range(self.experiment.lmin, self.experiment.lmaxT+1)
+        lrangeE = range(self.experiment.lmin, self.experiment.lmaxP+1)
+        lrangeC = lrangeE
+
+        if (self.experiment.lmaxT<self.experiment.lmaxP):
+            lrangeC = lrangeT
+
+        fskyT = self.experiment.fskyT
+        fskyE = self.experiment.fskyE
+        fskyC = np.sqrt(fskyT*fskyE)
+
+        Tnoise, Enoise = self.noise_powers()
+        fskyfactorT = np.array([1./((2.*l+1)*fskyT) for l in lrangeT])
+        fskyfactorE = np.array([1./((2.*l+1)*fskyE) for l in lrangeE])
+        fskyfactorC = np.array([1./((2.*l+1)*fskyC) for l in lrangeC])
+
+        # make sure theory Cls are calculated
+        self.include_polarization = True
+        self.theoryCls()
+
+        CTl = self.TTCls + Tnoise
+        CovTT = np.diagflat(2.*fskyfactorT*CTl[lrangeT]**2.0)
+
+        if (self.include_polarization):
+            CEl = self.EECls + Enoise
+            CCl = self.TECls
+
+            CovEE = np.diagflat(2.*fskyfactorE*CEl[lrangeE]**2.0)
+            CovCC = np.diagflat(fskyfactorC*(CCl[lrangeC]**2.0 + CTl[lrangeC]*CEl[lrangeC]))
+
+            CovTC = np.zeros((np.size(lrangeT), np.size(lrangeC)))
+            np.fill_diagonal(CovTC, 2.*fskyfactorC*CCl[lrangeC]*CTl[lrangeC])
+
+            CovTE = np.zeros((np.size(lrangeT), np.size(lrangeE)))
+            np.fill_diagonal(CovTE, 2.*fskyfactorC*CCl[lrangeC]**2.0)
+
+            CovEC = np.zeros((np.size(lrangeE), np.size(lrangeC)))
+            np.fill_diagonal(CovEC, 2.*fskyfactorC*CCl[lrangeC]*CEl[lrangeC])
+
+            covmat = np.bmat([[CovTT, CovTC, CovTE],
+                            [CovTC.T, CovCC, CovEC.T],
+                            [CovTE.T, CovEC, CovEE]])
+            self.Cl_covmat = covmat
+            return covmat
+
+        self.Cl_covmat = CovTT
+        return CovTT
+
 
     def fisher(self, XX=['tt', 'te', 'ee', 'bb']):
         """sum over the specified XX=[TT, TE, EE, BB] fisher matrices to get the
