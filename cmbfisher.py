@@ -66,6 +66,13 @@ class CMBExperiment(object):
             self.wT=1.0/(self.theta*self.noiseppT)**2.0 # units of 1/microK^2
             self.wP=1.0/(self.theta*self.noiseppP)**2.0
 
+        self.lrangeT = range(self.lmin, self.lmaxT+1)
+        self.lrangeE = range(self.lmin, self.lmaxP+1)
+        self.lrangeC = self.lrangeE
+
+        if (self.lmaxT<self.lmaxP):
+            self.lrangeC = self.lrangeT
+
 class CMBFisher(Fisher):
     """This class is for computing the CMB Fisher matrix given by
 
@@ -84,6 +91,7 @@ class CMBFisher(Fisher):
         self.experiment=expt
         self.cosmology=cosmology
         self.include_polarization=pol
+        self.Cl_covmat_computed=False
         Fisher.__init__(self, params, param_values, param_names, priors)
 
     def theoryCls(self, muKunits = True):
@@ -118,14 +126,18 @@ class CMBFisher(Fisher):
             mufac = (2.7255E6)**2.0
 
         self.TTCls = mufac*totCL[:LMAX+1,0]
+        self.transfer_functions = camb.get_transfer_functions(pars)
 
         if (self.include_polarization):
             self.TECls = mufac*totCL[:LMAX+1,3]
             self.BBCls = mufac*totCL[:LMAX+1,2]
             self.EECls = mufac*totCL[:LMAX+1,1]
+            # return the TT, TE, EE spectra in that order (CovMatrix assumes this)
+            return np.append(self.TTCls[self.experiment.lrangeT],
+                            np.append(self.TECls[self.experiment.lrangeC],
+                                        self.EECls[self.experiment.lrangeE]))
 
-        self.transfer_functions = camb.get_transfer_functions(pars)
-        return self.TTCls
+        return self.TTCls[self.experiment.lrangeT]
 
     def getCls(self, ps='tt'):
         """return one of the TT, TE, EE, BB Cls
@@ -139,17 +151,17 @@ class CMBFisher(Fisher):
         else:
             return self.TTCls
 
-    def Cls_deriv(self, param, param_value, ps='tt'):
+    def Cls_deriv(self, param, param_value):
         """compute the numerical derivative of :math:`C_ls`, the angular temperature power spectrum
         with respect to the parameter specified at the given value
         """
         v=getattr(self.cosmology, param)
         pv=param_value
         setattr(self.cosmology, param, pv*(1.+self.diff_percent))
-        plus_value = self.theoryCls(self.experiment.lmax)
+        plus_value = self.theoryCls()
 
         setattr(self.cosmology, param, pv*(1.-self.diff_percent))
-        minus_value = self.theoryCls(self.experiment.lmax)
+        minus_value = self.theoryCls()
 
         finite_diff=plus_value-minus_value
         delta_pv=2*self.diff_percent*pv
@@ -180,7 +192,7 @@ class CMBFisher(Fisher):
         Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0) for l in lrange])
         return np.array([Tnoise, Enoise])
 
-    def fisherXX(self, ps, output):
+    def fisher(self):
         """computes the fisher matrix given the parameters, experiment and cosmology definitions
         """
         # loop over multipoles to form the Fisher matrix
@@ -192,20 +204,25 @@ class CMBFisher(Fisher):
         else:
             self.theoryCls(256)
 
-        ClXX=self.getCls(ps)
+        if not(self.Cl_covmat_computed):
+            covmat = self.FullCovarianceMatrix()
+        else:
+            covmat = self.Cl_covmat
+
+        invcov = np.linalg.inv(covmat)
 
         for i in range(self.nparams):
-            dCij[i]=self.Cls_deriv(self.parameters[i], self.parameter_values[i], ps)
+            dCij[i]=self.Cls_deriv(self.parameters[i], self.parameter_values[i])
 
         for i in range(self.nparams):
             for j in range(self.nparams):
-                fijl=np.array([((2*l+1)/2)*(dCij[i][l]*dCij[j][l])/(ClXX[l]+self.noise_weight(ps)*np.exp((self.experiment.theta*l)**2.0))**2.0 for l in range(2, self.experiment.lmax-1)])
-                fmatrix[i][j]=self.experiment.fsky*np.sum(fijl)
+                fijl = dCij[i]@invcov@dCij[i]
+                fmatrix[i][j] = dCij[i]@invcov@dCij[j]
 
-        output.put(np.array(np.matrix(fmatrix)))
-        return np.array(np.matrix(fmatrix))  # numpy array for easy indexing
+        self.fisher_matrix = np.matrix(fmatrix)  # numpy array for easy indexing
+        return self.fisher_matrix
 
-    def FullCovarianceMatrix(self):
+    def FullCovarianceMatrix(self, turn_off_noise = False):
         """
         construct the full "block-diagonal" CMB covariance matrix for data
             {ClTT, ClTE, ClEE}
@@ -216,27 +233,30 @@ class CMBFisher(Fisher):
 
         See for example: astro-ph/9807130
         """
-        lrangeT = range(self.experiment.lmin, self.experiment.lmaxT+1)
-        lrangeE = range(self.experiment.lmin, self.experiment.lmaxP+1)
-        lrangeC = lrangeE
-
-        if (self.experiment.lmaxT<self.experiment.lmaxP):
-            lrangeC = lrangeT
+        lrangeT = self.experiment.lrangeT
+        lrangeE = self.experiment.lrangeE
+        lrangeC = self.experiment.lrangeC
 
         fskyT = self.experiment.fskyT
         fskyE = self.experiment.fskyE
         fskyC = np.sqrt(fskyT*fskyE)
 
         Tnoise, Enoise = self.noise_powers()
+
+        if (turn_off_noise):
+            # option to turn off noise for testing purposes
+            Tnoise = np.zeros(np.shape(Tnoise))
+            Enoise = np.zeros(np.shape(Enoise))
+
         fskyfactorT = np.array([1./((2.*l+1)*fskyT) for l in lrangeT])
         fskyfactorE = np.array([1./((2.*l+1)*fskyE) for l in lrangeE])
         fskyfactorC = np.array([1./((2.*l+1)*fskyC) for l in lrangeC])
 
         # make sure theory Cls are calculated
-        self.include_polarization = True
         self.theoryCls()
 
         CTl = self.TTCls + Tnoise
+
         CovTT = np.diagflat(2.*fskyfactorT*CTl[lrangeT]**2.0)
 
         if (self.include_polarization):
@@ -258,36 +278,14 @@ class CMBFisher(Fisher):
             covmat = np.bmat([[CovTT, CovTC, CovTE],
                             [CovTC.T, CovCC, CovEC.T],
                             [CovTE.T, CovEC, CovEE]])
+
             self.Cl_covmat = covmat
+            self.Cl_covmat_computed = True
             return covmat
 
         self.Cl_covmat = CovTT
+        self.Cl_covmat_computed = True
         return CovTT
-
-
-    def fisher(self, XX=['tt', 'te', 'ee', 'bb']):
-        """sum over the specified XX=[TT, TE, EE, BB] fisher matrices to get the
-        total CMB fisher matrix
-        """
-        if (('te' in XX) or ('ee' in XX) or ('bb' in XX)):
-            self.include_polarization = True
-
-        fmatrix=np.array([[0.]*self.nparams]*self.nparams)
-
-        output=mp.Queue()
-        processes=[mp.Process(target=self.fisherXX, args=(xx, output)) for xx in XX]
-
-        for p in processes:
-            p.start()
-        for p in processes:
-            p.join()
-
-        fmats=[output.get() for p in processes]
-        fmatrix=sum(fmats)
-
-        self.fisher_matrix=np.matrix(fmatrix)
-        return self.fisher_matrix
-
 
     def test_fisher(self):
         """
