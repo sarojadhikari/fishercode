@@ -46,7 +46,6 @@ class CMBExperiment(object):
             self.lmax=2500
             self.lmaxT = self.lmaxP = self.lmax
             self.fsky = 1
-            self.fskyT = self.fskyE = self.fskyP = self.fskyC = self.fsky
             self.wT = np.infty
             self.wP = np.infty
 
@@ -57,8 +56,7 @@ class CMBExperiment(object):
             self.lmaxT=2508
             self.lmax = max(self.lmaxP, self.lmaxT)
             self.lmin = 30
-            self.fsky=0.7
-            self.fskyT = self.fskyE = self.fskyP = self.fskyC = self.fsky
+            self.fsky = 0.7
             self.frequency=143
             self.theta=np.deg2rad(7./60.)   # in arcmin
             self.noiseppT=6.0  # noise per pixel for temperature in microK
@@ -69,6 +67,8 @@ class CMBExperiment(object):
         self.lrangeT = range(self.lmin, self.lmaxT+1)
         self.lrangeE = range(self.lmin, self.lmaxP+1)
         self.lrangeC = self.lrangeE
+
+        self.fskyT = self.fskyE = self.fskyP = self.fskyC = self.fsky
 
         if (self.lmaxT<self.lmaxP):
             self.lrangeC = self.lrangeT
@@ -118,7 +118,8 @@ class CMBFisher(Fisher):
 
         results = camb.get_results(pars)
         powers = results.get_cmb_power_spectra(pars, raw_cl=True)
-        totCL = powers['total']
+#        totCL = powers['unlensed_scalar']
+        totCL = powers['lensed_scalar']
 
 
         mufac = 1
@@ -169,6 +170,25 @@ class CMBFisher(Fisher):
         # set the default value back
         setattr(self.cosmology, param, v)
         return (finite_diff)/delta_pv
+        
+        
+    def Cov_deriv(self, param, param_value):
+        """ compute the numerical derivative of the covariance matrix
+        """
+        v=getattr(self.cosmology, param)
+        pv=param_value
+        setattr(self.cosmology, param, pv*(1.+self.diff_percent))
+        plus_value = self.FullCovarianceMatrix()
+        
+        setattr(self.cosmology, param, pv*(1.-self.diff_percent))
+        minus_value = self.FullCovarianceMatrix()
+        
+        finite_diff = plus_value-minus_value
+        delta_pv=2.*self.diff_percent*pv
+        
+        # set the default value back
+        setattr(self.cosmology, param, v)
+        return (finite_diff)/delta_pv
 
     def noise_weight(self, ps='tt'):
         """return the noise weight for the power spectrum specified
@@ -176,9 +196,9 @@ class CMBFisher(Fisher):
         if (self.experiment.name=="CVlimited"):
             return 0.
         if (ps=='tt'):
-            return 1./self.experiment.wT
+            return (1./self.experiment.wT)
         elif (ps=='ee' or ps =='bb'):
-            return 1./self.experiment.wP
+            return (1./self.experiment.wP)
         else:
             return 0.
 
@@ -188,11 +208,11 @@ class CMBFisher(Fisher):
         """
         th = self.experiment.theta
         lrange = range(0, self.experiment.lmax+1) # start from zero for easy indexing
-        Tnoise = np.array([self.noise_weight('tt')*np.exp((th*l)**2.0) for l in lrange])
-        Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0) for l in lrange])
+        Tnoise = np.array([self.noise_weight('tt')*np.exp((th*l)**2.0/8/np.log(2.)) for l in lrange])
+        Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0/8/np.log(2.)) for l in lrange])
         return np.array([Tnoise, Enoise])
 
-    def fisher(self):
+    def fisher(self, include_cov_term=False):
         """computes the fisher matrix given the parameters, experiment and cosmology definitions
         """
         # loop over multipoles to form the Fisher matrix
@@ -216,13 +236,26 @@ class CMBFisher(Fisher):
 
         for i in range(self.nparams):
             for j in range(self.nparams):
-                fijl = dCij[i]@invcov@dCij[i]
+                #fijl = dCij[i]@invcov@dCij[i]
                 fmatrix[i][j] = dCij[i]@invcov@dCij[j]
+                
+        if (include_cov_term):
+            # add the 0.5*Tr[C^{-1}C_,iC^{-1}C_,j] term to see if there is any effect
+            #print ("not implemented")
+            dCovij = [0.]*self.nparams
+            for i in range(self.nparams):
+                dCovij[i] = self.Cov_deriv(self.parameters[i], self.parameter_values[i])
+            
+            for i in range(self.nparams):
+                for j in range(self.nparams):
+                    term2ij = 0.5*np.trace(invcov@dCovij[i]@invcov@dCovij[j])
+                    print (term2ij/fmatrix[i][j])
+                    fmatrix[i][j] = fmatrix[i][j] + term2ij
 
         self.fisher_matrix = np.matrix(fmatrix)  # numpy array for easy indexing
         return self.fisher_matrix
 
-    def FullCovarianceMatrix(self, turn_off_noise = False):
+    def FullCovarianceMatrix(self, turn_off_noise = False, CC=True):
         """
         construct the full "block-diagonal" CMB covariance matrix for data
             {ClTT, ClTE, ClEE}
@@ -278,6 +311,9 @@ class CMBFisher(Fisher):
             covmat = np.bmat([[CovTT, CovTC, CovTE],
                             [CovTC.T, CovCC, CovEC.T],
                             [CovTE.T, CovEC, CovEE]])
+            if (CC==False):
+                covmat = np.bmat([[CovTT, CovTE],
+                                [CovTE.T, CovEE]])
 
             self.Cl_covmat = covmat
             self.Cl_covmat_computed = True
