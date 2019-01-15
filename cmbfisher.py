@@ -6,7 +6,6 @@
 import numpy as np
 from fishercode import Fisher
 import camb
-from camb import model, initialpower
 
 class CMBExperiment(object):
     """ CMB experiment class
@@ -56,8 +55,8 @@ class CMBExperiment(object):
             self.lmaxT=2508
             self.lmax = max(self.lmaxP, self.lmaxT)
             self.lmin = 30
-            self.fsky = 0.7
-            self.frequency=143
+            self.fsky = 0.5
+            self.frequency = 143
             self.theta=np.deg2rad(7./60.)   # in arcmin
             self.noiseppT=6.0  # noise per pixel for temperature in microK
             self.noiseppP=11.5    # noise per pixel for polarization in microK
@@ -73,6 +72,20 @@ class CMBExperiment(object):
         if (self.lmaxT<self.lmaxP):
             self.lrangeC = self.lrangeT
 
+Planck2015expt = CMBExperiment(name="Planck")
+            
+Planck2015pars = {'H0':     67.8,
+              'Obh2':   0.02226,
+              'Och2':   0.1186,
+              'tau':    0.066,
+              'ln10As': 3.062,
+              'ns':     0.9677,
+              'mnu':    0.06,
+              'Neff':   3.046,
+              'r':      0.,
+              'omk':    0.}
+
+    
 class CMBFisher(Fisher):
     """This class is for computing the CMB Fisher matrix given by
 
@@ -84,7 +97,8 @@ class CMBFisher(Fisher):
 
     """
 
-    def __init__(self, expt, cosmology, params=[], param_values=[], param_names=[], priors=[], pol=True):
+    def __init__(self, expt=Planck2015expt, cosmology=Planck2015pars, 
+                 params=[], param_values=[], param_names=[], priors=[], pol=True):
         """Set the experiment and cosmology for CMB Fisher computations.
         Also, set the parameters and priors if specified
         """
@@ -107,19 +121,23 @@ class CMBFisher(Fisher):
 
         # using camb
         pars = camb.CAMBparams()
-        pars.set_cosmology(H0=self.cosmology.H0, ombh2=self.cosmology.Ob0*self.cosmology.h**2.0,
-                           omch2=self.cosmology.Oc0*self.cosmology.h**2.0, omk=0,
-                           tau=self.cosmology.tau, mnu=self.cosmology.m_nu[-1])
-        pars.InitPower.set_params(As=self.cosmology.As, ns=self.cosmology.n, r=self.cosmology.r)
+        pars.set_cosmology(H0=self.cosmology['H0'], 
+                           ombh2=self.cosmology['Obh2'],
+                           omch2=self.cosmology['Och2'], 
+                           omk=self.cosmology['omk'],
+                           tau=self.cosmology['tau'], 
+                           mnu=self.cosmology['mnu'],
+                           nnu=self.cosmology['Neff'])
+        As = np.exp(self.cosmology['ln10As'])*1.e-10
+        pars.InitPower.set_params(As=As, ns=self.cosmology['ns'], r=self.cosmology['r'])
         pars.set_for_lmax(LMAX+200)
 
-        if (self.cosmology.r > 0.0):
+        if (self.cosmology['r'] > 0.0):
             pars.WantTensors = True
 
         results = camb.get_results(pars)
         powers = results.get_cmb_power_spectra(pars, raw_cl=True)
-#        totCL = powers['unlensed_scalar']
-        totCL = powers['lensed_scalar']
+        totCL = powers['total']
 
 
         mufac = 1
@@ -156,38 +174,46 @@ class CMBFisher(Fisher):
         """compute the numerical derivative of :math:`C_ls`, the angular temperature power spectrum
         with respect to the parameter specified at the given value
         """
-        v=getattr(self.cosmology, param)
-        pv=param_value
-        setattr(self.cosmology, param, pv*(1.+self.diff_percent))
-        plus_value = self.theoryCls()
-
-        setattr(self.cosmology, param, pv*(1.-self.diff_percent))
-        minus_value = self.theoryCls()
-
-        finite_diff=plus_value-minus_value
-        delta_pv=2*self.diff_percent*pv
-
-        # set the default value back
-        setattr(self.cosmology, param, v)
-        return (finite_diff)/delta_pv
+        v = self.cosmology[param]
+        pv = param_value
+        if (pv==0.):
+            # may need to be careful about the step-size
+            self.cosmology[param] = self.diff_percent
+            delta_pv = 2*self.diff_percent
+        else:
+            self.cosmology[param] = pv*(1.+self.diff_percent)
+            delta_pv = 2*self.diff_percent*pv
         
+        plus_value = self.theoryCls()
+        
+        if (pv==0.):
+            self.cosmology[param] = -self.diff_percent
+        else:
+            self.cosmology[param] = pv*(1.-self.diff_percent)
+        
+        minus_value = self.theoryCls()
+        
+        finite_diff = plus_value - minus_value
+                
+        self.cosmology[param] = v
+        return (finite_diff)/delta_pv
         
     def Cov_deriv(self, param, param_value):
         """ compute the numerical derivative of the covariance matrix
         """
-        v=getattr(self.cosmology, param)
-        pv=param_value
-        setattr(self.cosmology, param, pv*(1.+self.diff_percent))
+        v = self.cosmology[param]
+        pv = param_value
+        self.cosmology[param] = pv*(1.+self.diff_percent)
         plus_value = self.FullCovarianceMatrix()
         
-        setattr(self.cosmology, param, pv*(1.-self.diff_percent))
+        self.cosmology[param] = pv*(1.-self.diff_percent)
         minus_value = self.FullCovarianceMatrix()
         
         finite_diff = plus_value-minus_value
         delta_pv=2.*self.diff_percent*pv
         
         # set the default value back
-        setattr(self.cosmology, param, v)
+        self.cosmology[param] = v
         return (finite_diff)/delta_pv
 
     def noise_weight(self, ps='tt'):
@@ -206,10 +232,42 @@ class CMBFisher(Fisher):
         """
         the noise power spectra
         """
-        th = self.experiment.theta
+        amtorad = 0.000290888
         lrange = range(0, self.experiment.lmax+1) # start from zero for easy indexing
-        Tnoise = np.array([self.noise_weight('tt')*np.exp((th*l)**2.0/8/np.log(2.)) for l in lrange])
-        Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0/8/np.log(2.)) for l in lrange])
+        
+        if self.experiment.name == "Planck":
+            # use the formula and specifications from 1403.5271 to compute noise 
+            freqs = [143, 217]
+            DTT = [1.5, 3.3] # in muK/K
+            DPT = [3.0, 6.6] # in muK/K
+            TCMB = 2.7255
+            theta = [7., 5.]
+            
+            TNoiseChannels = []
+            ENoiseChannels = []
+            
+            X = 0
+            for freq in freqs:
+                wTinv = (DTT[X]*TCMB*theta[X]*amtorad)**2.0
+                wEinv = (DPT[X]*TCMB*theta[X]*amtorad)**2.0
+                noiseT = wTinv * np.array([np.exp(l*(l+1)*(theta[X]*amtorad)**2.0/8./np.log(2.)) for l in range(0, self.experiment.lmaxT+1)])
+                noiseE = wEinv * np.array([np.exp(l*(l+1)*(theta[X]*amtorad)**2.0/8./np.log(2.)) for l in range(0, self.experiment.lmaxT+1)])
+                TNoiseChannels.append(noiseT)
+                ENoiseChannels.append(noiseE)
+                
+                X = X + 1
+            
+            # now combine the two channels
+            Tnoise = 1./((1./TNoiseChannels[0]) + (1./TNoiseChannels[1]))
+            Enoise = 1./((1./ENoiseChannels[0]) + (1./ENoiseChannels[1]))
+            
+        else:
+            th = self.experiment.theta
+            Tnoise = np.array([self.noise_weight('tt')*np.exp((th*l)**2.0/8./np.log(2.)) for l in lrange])
+            Enoise = np.array([self.noise_weight('ee')*np.exp((th*l)**2.0/8./np.log(2.)) for l in lrange])
+        
+        
+        
         return np.array([Tnoise, Enoise])
 
     def fisher(self, include_cov_term=False):
