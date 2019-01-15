@@ -99,7 +99,6 @@ class Fisher(object):
         """
         import pickle, copy
         pklclass = copy.copy(self)
-        pklclass.cosmology = None # there are things in cosmology now that cannot be pickled
         pickle.dump(pklclass, open(fname, "wb"))
         #np.savetxt(fname, self.fisher_matrix, header=hd)
         return 0
@@ -175,33 +174,31 @@ class Fisher(object):
         #plt.show()
         return ax
 
-    def plot_error_matrix(self, params, nstd=1, nbinsx=6, nbinsy=6):
+    def plot_error_matrix(self, params, nstd=1, nbinsx=6, nbinsy=6, fsize=2.):
         """ plot a matrix of fisher forecast error ellipses given the
         list of parameters provided
         """
         fac = len(params)-1
-        #plt.figure(num=None, figsize=(fac*xs, fac*ys))
-        #plt.close('all')
-
-        f, allaxes = plt.subplots(fac, fac, sharex="col", sharey="row")
-
+        
+        f, allaxes = plt.subplots(fac, fac, figsize=(fac*fsize, fac*fsize),
+                                  sharex="col", sharey="row")
 
         if fac<2:
-            errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="b", alpha=0.4)
-            ere2, xyaxes2 = self.error_ellipse(params[0], params[1], nstd=2, clr="r", alpha=0.1)
+            errorellipse, xyaxes=self.error_ellipse(params[0],params[1], nstd=nstd, clr="cornflowerblue", alpha=0.75)
+            ere2, xyaxes2 = self.error_ellipse(params[0], params[1], nstd=2*nstd, clr="cornflowerblue", alpha=0.35)
             allaxes.add_artist(ere2)
             allaxes.add_artist(errorellipse)
             allaxes.axis(xyaxes)
-            allaxes.set_xlabel(self.param_names[0], fontsize=14)
-            allaxes.set_ylabel(self.param_names[1], fontsize=14)
+            allaxes.set_xlabel(self.param_names[params[0]], fontsize=14)
+            allaxes.set_ylabel(self.param_names[params[1]], fontsize=14)
         else:
             for j in params:
                 for i in params:
                     if (j>i):
                         errorellipse, xyaxes=self.error_ellipse(i,j, nstd=nstd, clr="cornflowerblue", alpha=0.75)
-                        ere2, xyaxes2 = self.error_ellipse(params[i], params[j], nstd=2*nstd, clr="cornflowerblue", alpha=0.35)
-                        jp=i
-                        ip=j-1
+                        ere2, xyaxes2 = self.error_ellipse(i, j, nstd=2*nstd, clr="cornflowerblue", alpha=0.35)
+                        jp=params.index(i)
+                        ip=params.index(j)-1
                         axis=allaxes[ip][jp]
                         axis.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
                         axis.locator_params(axis='x', nbins=nbinsx)
@@ -209,9 +206,12 @@ class Fisher(object):
                         axis.add_artist(ere2)
                         axis.add_artist(errorellipse)
                         axis.axis(xyaxes2)
-                        axis.set_xlabel(self.param_names[i], fontsize=14)
-                        axis.set_ylabel(self.param_names[j], fontsize=14)
+                        if (ip==fac-1):
+                            axis.set_xlabel(self.param_names[i], fontsize=14)
+                        if (jp==0):
+                            axis.set_ylabel(self.param_names[j], fontsize=14)
                         #allaxes[jp][ip].set_title(str(jp)+","+str(ip))
+                
 
         for i in range(fac):
             for j in range(fac):
@@ -219,3 +219,4 @@ class Fisher(object):
                     allaxes[i][j].axis('off')
 
         plt.ticklabel_format(style='sci', axis='both', scilimits=(-3,3))
+        plt.tight_layout()
