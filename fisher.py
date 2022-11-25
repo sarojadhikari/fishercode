@@ -11,8 +11,6 @@ from matplotlib.patches import Ellipse
 import matplotlib.pyplot as plt
 
 import matplotlib
-matplotlib.rcParams.update({'text.usetex': True})
-matplotlib.rcParams.update({'axes.formatter.useoffset': False})
 
 class Fisher(object):
     """
