@@ -4,7 +4,7 @@
 
 """
 import numpy as np
-from fishercode import Fisher
+from fisher import Fisher
 import camb
 
 class CMBExperiment(object):
